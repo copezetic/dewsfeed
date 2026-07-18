@@ -1,0 +1,16 @@
+# Whitelist: only the Dews Feed projects ride along
+/*
+!/.gitignore
+!/README.md
+!/NOTES.md
+!/dews_feed_web/
+!/the_dews_feed_v10/
+
+# secrets stay local — examples are committed instead
+dews_feed_web/secrets.js
+the_dews_feed_v10/secrets.h
+secrets.h
+
+# churn + bulk
+dews_feed_web/.last_deploy_hash
+*.mp4

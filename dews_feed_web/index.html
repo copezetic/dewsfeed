@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Dews Feed</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     THE DEWS FEED — TICKER WALL (office edition · 100 Mason St)
+     Pages: TOP STORY · SPORTS · MARKETS(+charts) · FLIGHTS RADAR ·
+            BANKING · 7-DAY WEATHER · COMMUTE · GREENWICH · WORK TO-DO
+     Breaking news + NWS warnings take over the full screen.
+     ══════════════════════════════════════════════════════════════════ */
+  :root{
+    --ground:#07090f; --card:#0b0e17; --edge:#161b2a;
+    --ink:#e8ecf4; --ink-dim:#8a93a8; --ink-faint:#4a5164;
+    --amber:#ffb400; --cyan:#26d0e0; --blue:#3a7bff; --teal:#18c29c;
+    --red:#ff4757; --green:#39d353; --purple:#c46bff; --yellow:#ffd23f;
+    --up:#4ade5b; --down:#ff5a5a;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+    --sans:"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+       height:100vh;overflow:hidden;cursor:none;display:flex;flex-direction:column}
+  body.mouse{cursor:auto}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,.55) 1px, transparent 1px);
+    background-size:3px 3px;opacity:.3}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+  #topbar{flex:0 0 auto;display:flex;align-items:center;gap:3vw;
+          padding:1.2vh 2.2vw;border-bottom:2px solid var(--edge)}
+  #wordmark{image-rendering:pixelated;flex:0 0 auto}
+  #clock{font-family:var(--mono);font-weight:700;font-size:7vh;line-height:1;
+         color:var(--amber);font-variant-numeric:tabular-nums;
+         text-shadow:0 0 18px rgba(255,180,0,.45),0 0 46px rgba(255,180,0,.18)}
+  #dateline{font-family:var(--mono);font-size:2.2vh;letter-spacing:.18em;
+            color:var(--ink-dim);text-transform:uppercase;margin-top:.4vh}
+  .top-wx{margin-left:auto;display:flex;gap:3vw;align-items:center}
+  .wx-slot{text-align:right}
+  .wx-slot .l{font-family:var(--mono);font-size:1.8vh;letter-spacing:.2em;color:var(--ink-dim)}
+  .wx-slot .v{font-family:var(--mono);font-weight:700;font-size:5.4vh;line-height:1.1;
+              font-variant-numeric:tabular-nums}
+  .wx-slot .v .e{font-size:4.2vh}
+  #wx1V{color:var(--cyan)} #wx2V{color:var(--amber)}
+  #proxyDot{width:1.1vh;height:1.1vh;border-radius:50%;background:var(--ink-faint);flex:0 0 auto}
+  #proxyDot.ok{background:var(--up);box-shadow:0 0 8px var(--up)}
+  #proxyDot.warn{background:var(--yellow)}
+
+  #spot{flex:1;display:flex;flex-direction:column;justify-content:center;
+        padding:2vh 4vw;position:relative;min-height:0}
+  #spotKicker{font-family:var(--mono);font-size:2.6vh;font-weight:700;letter-spacing:.3em;
+              text-transform:uppercase;color:var(--acc,var(--amber));margin-bottom:1.6vh;
+              display:flex;align-items:center;gap:1.2vw;flex:0 0 auto}
+  #spotKicker .bar{display:inline-block;width:3.5vw;height:.7vh;background:var(--acc,var(--amber))}
+  #spotBody{font-weight:700;font-size:7.2vh;line-height:1.14;text-wrap:balance;
+            max-width:92vw;letter-spacing:-.01em;min-height:0;position:relative}
+  #spotBody .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  #spotBody .up{color:var(--up)} #spotBody .down{color:var(--down)}
+  #spotBody .gold{color:var(--amber)} #spotBody .dim{color:var(--ink-dim)}
+  #spotBody .cy{color:var(--cyan)}
+  #spotSub{font-family:var(--mono);font-size:2.6vh;color:var(--ink-dim);
+           letter-spacing:.12em;margin-top:2vh;text-transform:uppercase;flex:0 0 auto}
+  #spotDots{position:absolute;bottom:1.6vh;left:4vw;display:flex;gap:.8vw}
+  #spotDots i{width:1.2vh;height:1.2vh;border-radius:50%;background:var(--edge)}
+  #spotDots i.on{background:var(--amber)}
+  /* 3D stage: pages rise out of depth instead of flat-fading */
+  #spot{perspective:1400px}
+  .fadein{animation:pageIn .9s cubic-bezier(.22,.9,.3,1) both;transform-style:preserve-3d}
+  @keyframes pageIn{from{opacity:0;transform:translateY(6vh) translateZ(-320px) rotateX(10deg)}
+                    to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0;transform:translateY(1.5vh)}to{opacity:1;transform:none}}
+  @keyframes blink{50%{opacity:.25}}
+
+  /* ── SPORTS: hero score + more-games rail ── */
+  .sp-wrap{display:flex;flex-direction:column;gap:3vh}
+  .score-row{display:flex;align-items:center;gap:2vw;font-family:var(--mono);
+             font-variant-numeric:tabular-nums}
+  .score-row img{height:13vh;width:13vh;object-fit:contain;
+                 filter:drop-shadow(0 0 12px rgba(255,255,255,.12))}
+  .score-row .num{font-size:10.5vh;font-weight:800;color:var(--amber)}
+  .score-row .ab{font-size:4.6vh;color:var(--ink-dim)}
+  .score-row .dash{font-size:7vh;color:var(--ink-faint)}
+  .sp-rail{display:flex;gap:2.2vw}
+  .sp-news{display:flex;flex-direction:column;gap:1vh;margin-top:.5vh}
+  .sp-nw{display:flex;gap:1.2vw;align-items:baseline;font-size:2.9vh;font-weight:600;
+         color:var(--ink);line-height:1.25}
+  .sp-nw .b{color:var(--acc,var(--amber));font-family:var(--mono);font-weight:800;flex:0 0 auto}
+  .sp-nw .s{color:var(--ink-faint);font-family:var(--mono);font-size:2vh;flex:0 0 auto}
+  .sp-src{font-family:var(--mono);font-size:1.8vh;letter-spacing:.2em;color:var(--ink-faint)}
+  .mini{display:flex;align-items:center;gap:.8vw;background:var(--card);
+        border:1px solid var(--edge);border-radius:1vh;padding:1.2vh 1.2vw;
+        font-family:var(--mono);font-size:2.8vh}
+  .mini img{height:4.6vh;width:4.6vh;object-fit:contain}
+  .mini .s{font-weight:800;color:var(--ink)}
+  .mini .st{font-size:2vh;color:var(--ink-faint);margin-left:.5vw}
+  .mini .live{color:var(--up);font-size:2vh;font-weight:800;animation:blink 1.2s infinite}
+
+  /* ── MARKETS: dual chart panels + tile strip ── */
+  .mk-wrap{display:flex;flex-direction:column;gap:2.2vh;width:90vw}
+  .mk-charts{display:flex;gap:2.5vw}
+  .mk-panel{flex:1;background:var(--card);border:1px solid var(--edge);border-radius:1.4vh;
+            padding:2vh 1.6vw}
+  .mk-panel .ml{font-family:var(--mono);font-size:2.2vh;letter-spacing:.22em;color:var(--ink-dim);
+                display:flex;align-items:center;gap:.8vw}
+  .mk-panel .ml img{height:3.6vh;width:3.6vh;border-radius:.6vh;object-fit:contain;background:#fff;padding:.3vh}
+  .mk-panel .row{display:flex;align-items:baseline;gap:1.2vw;margin:.6vh 0}
+  .mk-panel .mv{font-family:var(--mono);font-weight:800;font-size:7.5vh;line-height:1;
+                font-variant-numeric:tabular-nums}
+  .mk-panel .mc{font-family:var(--mono);font-size:3.2vh;font-weight:700}
+  .mk-panel svg{display:block;width:100%;height:14vh}
+  .mk-panel .nodata{font-family:var(--mono);color:var(--ink-faint);font-size:2.4vh;
+                    height:14vh;display:flex;align-items:center}
+  .mk-tiles{display:flex;gap:2.5vw}
+  .mk-tile{flex:1;background:var(--card);border:1px solid var(--edge);border-radius:1.2vh;
+           padding:1.4vh 1.4vw;font-family:var(--mono)}
+  .mk-tile .ml{font-size:1.9vh;letter-spacing:.22em;color:var(--ink-dim)}
+  .mk-tile .mv{font-weight:800;font-size:4.4vh;font-variant-numeric:tabular-nums}
+
+  /* ── NEWS pages: hero headline + list of more ── */
+  .nw-wrap{display:flex;flex-direction:column;gap:2.4vh;max-width:90vw}
+  .nw-hero{font-weight:700;font-size:6.2vh;line-height:1.15;text-wrap:balance}
+  .nw-list{display:flex;flex-direction:column;gap:1.5vh}
+  .nw-item{display:flex;gap:1.4vw;align-items:baseline;font-size:3.4vh;font-weight:600;
+           color:var(--ink);line-height:1.25}
+  .nw-item .b{color:var(--acc,var(--amber));font-family:var(--mono);flex:0 0 auto;font-weight:800}
+  .nw-item .s{color:var(--ink-faint);font-family:var(--mono);font-size:2.2vh;flex:0 0 auto}
+
+  /* ── FLIGHTS radar ── */
+  .fl-wrap{display:flex;align-items:center;gap:4vw;height:52vh}
+  .radar{position:relative;height:52vh;width:52vh;flex:0 0 auto;border-radius:50%;
+         background:radial-gradient(circle,#0a1626 0%,#070d18 70%,#060a12 100%);
+         border:2px solid #17324e;overflow:hidden}
+  .radar .ring{position:absolute;border-radius:50%;border:1px solid #123049;inset:0}
+  .radar .ring.r2{inset:16.6%}.radar .ring.r3{inset:33.3%}
+  .radar .cross{position:absolute;background:#0e2438}
+  .radar .cross.h{left:0;right:0;top:50%;height:1px}
+  .radar .cross.v{top:0;bottom:0;left:50%;width:1px}
+  .radar .sweep{position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(38,208,224,.28), transparent 18%);
+    animation:sweep 6s linear infinite}
+  @keyframes sweep{to{transform:rotate(360deg)}}
+  .radar .home{position:absolute;width:1.4vh;height:1.4vh;
+    background:var(--amber);border-radius:50%;transform:translate(-50%,-50%);
+    box-shadow:0 0 10px var(--amber)}
+  .radar .plane{position:absolute;font-size:3.6vh;line-height:1;
+    transform:translate(-50%,-50%) rotate(var(--hdg));color:#9fc5e8;
+    text-shadow:0 0 8px rgba(159,197,232,.7)}
+  .radar .plane.near{color:var(--amber);font-size:4.6vh;
+    text-shadow:0 0 12px rgba(255,180,0,.8)}
+  .fl-info .cs{font-family:var(--mono);font-weight:800;font-size:7.5vh;color:var(--amber);line-height:1}
+  .fl-info .al{font-family:var(--sans);font-weight:700;font-size:3.6vh;margin-top:.8vh}
+  .fl-info .st{font-family:var(--mono);font-size:2.8vh;color:var(--ink-dim);margin-top:1.2vh;line-height:1.6}
+  .fl-info .st b{color:var(--cyan);font-weight:700}
+  .fl-photo{display:block;margin-top:1.6vh;width:30vw;max-height:24vh;object-fit:cover;
+            border-radius:1.2vh;border:1px solid var(--edge)}
+  .fl-credit{font-family:var(--mono);font-size:1.6vh;color:var(--ink-faint);margin-top:.6vh}
+
+  /* ── page watermarks — big faint themed glyph, right side ── */
+  .pg-wm{position:absolute;right:5vw;top:50%;transform:translateY(-50%);
+         font-size:26vh;opacity:.09;pointer-events:none;line-height:1}
+
+  /* ── commute mini-maps ── */
+  .cm-map{display:block;margin-top:1.6vh;width:26vw;border-radius:1.2vh;
+          border:1px solid var(--edge)}
+  /* car cruises under the drive times (emoji faces left → right-to-left) */
+  .cm-road{position:relative;margin-top:2.4vh;height:6.5vh;width:70vw;overflow:hidden}
+  .cm-road::after{content:"";position:absolute;left:0;right:0;bottom:1vh;height:.35vh;
+    background:repeating-linear-gradient(90deg,var(--ink-faint) 0 2.4vw,transparent 2.4vw 4vw);
+    opacity:.5}
+  .cm-anim{position:absolute;bottom:1.4vh;font-size:4.8vh;line-height:1;
+    animation:carRun 9s linear infinite}
+  @keyframes carRun{from{transform:translateX(72vw)}to{transform:translateX(-14vw)}}
+
+  /* ══════ DEPTH SYSTEM — ambient field, float choreography, 3D tilts ══════ */
+  #depth{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  /* low-specificity on purpose: must NOT beat #alert{position:fixed} etc. */
+  body>:not([id="depth"]){position:relative;z-index:1}
+  #depth i{position:absolute;left:-50vw;top:-120vh;width:200vw;height:340vh;
+    background-image:radial-gradient(circle,rgba(160,190,255,.5) 0 1px,transparent 1.6px);
+    background-size:7vw 9vh}
+  #depth i.l1{opacity:.30;animation:driftUp 160s linear infinite}
+  #depth i.l2{opacity:.18;background-size:12vw 16vh;animation:driftUp 300s linear infinite}
+  @keyframes driftUp{to{transform:translateY(120vh)}}
+  #depth b{position:absolute;border-radius:50%;filter:blur(6vh);opacity:.22}
+  #depth b.o1{width:46vh;height:46vh;left:5vw;top:58vh;
+    background:radial-gradient(circle,#2a5cff,transparent 70%);
+    animation:orb 28s ease-in-out infinite alternate}
+  #depth b.o2{width:38vh;height:38vh;right:8vw;top:10vh;
+    background:radial-gradient(circle,#ffb400,transparent 70%);
+    animation:orb 36s ease-in-out infinite alternate-reverse}
+  #depth b.o3{width:30vh;height:30vh;right:32vw;bottom:2vh;
+    background:radial-gradient(circle,#26d0e0,transparent 70%);
+    animation:orb 44s ease-in-out infinite alternate}
+  @keyframes orb{to{transform:translate(6vw,-6vh) scale(1.16)}}
+
+  /* stagger index — set once, reused by every list/tile cascade */
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(1){--i:0}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(2){--i:1}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(3){--i:2}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(4){--i:3}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(5){--i:4}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(6){--i:5}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(7){--i:6}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(8){--i:7}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(9){--i:8}
+  :is(.nw-item,.td,.fw-mt,.sp-nw,.tr,.mini,.wk,.wt,.mk-tile):nth-child(10){--i:9}
+
+  @keyframes riseIn{from{opacity:0;transform:translateY(2.5vh) translateZ(-60px)}
+                    to{opacity:1;transform:none}}
+  @keyframes float3d{from{transform:translateY(.9vh) rotateX(.8deg)}
+                     to{transform:translateY(-.9vh) rotateX(-.8deg)}}
+  /* list rows: cascade in */
+  .nw-item,.td,.fw-mt,.sp-nw,.tr{
+    animation:riseIn .55s cubic-bezier(.2,.8,.3,1) both;
+    animation-delay:calc(var(--i,0)*.07s)}
+  /* card tiles: cascade in, then float forever (staggered phase) */
+  .mini,.wk,.wt,.mk-tile,.wh-tile{
+    animation:riseIn .55s cubic-bezier(.2,.8,.3,1) both,
+              float3d 7s ease-in-out calc(var(--i,0)*-1.9s + .6s) infinite alternate}
+  /* card bevel + deep layered shadow */
+  .mk-panel,.mk-tile,.mini,.wh-tile{
+    box-shadow:0 1.2vh 3vh rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07)}
+
+  /* per-page hero depth */
+  .mk-charts{perspective:1200px}
+  .mk-panel:first-child{transform:rotateY(2.5deg)}
+  .mk-panel:last-child{transform:rotateY(-2.5deg)}
+  .score-row{perspective:900px}
+  .score-row img{animation:coinTilt 4.5s ease-in-out infinite alternate}
+  .score-row img:last-of-type{animation-delay:-2.2s}
+  @keyframes coinTilt{from{transform:rotateY(-24deg)}to{transform:rotateY(24deg)}}
+  .fl-wrap{perspective:1100px}
+  .radar{transform:rotateX(10deg)}
+  .wc-wrap{perspective:1100px}
+  .wc{transform:rotateX(5deg)}
+  .wc .face{animation:float3d 8s ease-in-out infinite alternate}
+  .wc:nth-child(2) .face{animation-delay:-2s}
+  .wc:nth-child(3) .face{animation-delay:-4s}
+  .wc:nth-child(4) .face{animation-delay:-6s}
+  .vb-wrap{transform-style:preserve-3d;
+    animation:boardFloat 9s ease-in-out infinite alternate}
+  @keyframes boardFloat{from{transform:rotateX(3deg) translateY(.4vh)}
+                        to{transform:rotateX(5deg) translateY(-.4vh)}}
+  .ap-img{animation:kenburns 28s ease-in-out infinite alternate}
+  @keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.07) translate(-1.2%,-1%)}}
+  .mn-big{animation:moonFloat 9s ease-in-out infinite alternate}
+  @keyframes moonFloat{from{transform:translateY(1.2vh)}to{transform:translateY(-1.2vh)}}
+  .pg-wm{animation:wmFloat 10s ease-in-out infinite alternate}
+  @keyframes wmFloat{from{transform:translateY(-46%) rotate(-3deg)}
+                     to{transform:translateY(-54%) rotate(3deg)}}
+  #spotKicker .bar{animation:barGlow 3s ease-in-out infinite alternate}
+  @keyframes barGlow{from{box-shadow:0 0 5px var(--acc,var(--amber))}
+                     to{box-shadow:0 0 16px var(--acc,var(--amber))}}
+
+  /* ══════ SCENE SYSTEM — per-page animated backdrops + 3D hand-off ══════ */
+  /* shooting stars in the ambient field */
+  #depth s.shoot{position:absolute;top:12vh;left:-22vw;width:22vw;height:2px;
+    border-radius:2px;opacity:0;transform:rotate(16deg);
+    background:linear-gradient(90deg,transparent,rgba(200,220,255,.9));
+    animation:shoot 9s linear infinite}
+  #depth s.shoot.s2{top:34vh;animation-duration:13s;animation-delay:5s}
+  @keyframes shoot{0%,86%{opacity:0;transform:rotate(16deg) translateX(0)}
+    88%{opacity:1}96%,100%{opacity:0;transform:rotate(16deg) translateX(150vw)}}
+
+  /* page backdrop stage: sits behind the spotlight content, theme per page */
+  #pageBg{position:absolute;inset:-2vh -2vw;z-index:0;pointer-events:none;
+    overflow:hidden;transition:opacity .6s;opacity:1}
+  #spot>:not([id="pageBg"]):not([id="hud"]){position:relative;z-index:1}
+
+  /* war-room HUD chrome: corner brackets, scanline, telemetry readout */
+  #hud{position:absolute;inset:.5vh .6vw;z-index:2;pointer-events:none}
+  #hud s{position:absolute;width:4.5vh;height:4.5vh;
+    border:2px solid rgba(120,165,205,.35)}
+  #hud s.c1{left:0;top:0;border-right:0;border-bottom:0}
+  #hud s.c2{right:0;top:0;border-left:0;border-bottom:0}
+  #hud s.c3{right:0;bottom:0;border-left:0;border-top:0}
+  #hud s.c4{left:0;bottom:0;border-right:0;border-top:0}
+  #hud i.scan{position:absolute;left:2%;right:2%;top:0;height:2px;display:block;
+    background:linear-gradient(90deg,transparent,rgba(120,200,235,.22),transparent);
+    animation:scanY 8s linear infinite}
+  @keyframes scanY{from{transform:translateY(0)}to{transform:translateY(72vh)}}
+  #hudTlm{position:absolute;right:1.2vw;bottom:.4vh;font-family:var(--mono);
+    font-size:1.7vh;letter-spacing:.2em;color:var(--ink-faint)}
+  #hudTlm b{color:#39d353;font-weight:400}
+  #pageBg i,#pageBg em{position:absolute;inset:0;display:block}
+
+  /* GRID — synthwave floor rushing toward a glowing horizon (markets/fed) */
+  #pageBg.bg-grid{perspective:600px}
+  #pageBg.bg-grid i{top:46%;height:220%;transform-origin:top center;opacity:.34;
+    background:
+      repeating-linear-gradient(90deg,rgba(90,140,255,.5) 0 2px,transparent 2px 7vw),
+      repeating-linear-gradient(0deg,rgba(90,140,255,.5) 0 2px,transparent 2px 9vh);
+    animation:gridRush 3.2s linear infinite}
+  /* translate by exactly one row period → seamless loop, compositor-only */
+  @keyframes gridRush{from{transform:rotateX(74deg) translateY(-9vh)}
+                      to{transform:rotateX(74deg) translateY(0)}}
+  #pageBg.bg-grid em{top:38%;height:26%;
+    background:radial-gradient(ellipse 70% 100% at 50% 55%,rgba(80,130,255,.28),transparent 70%)}
+  /* data skyline: green/red/amber columns rising behind the grid horizon */
+  #pageBg.bg-grid::after{content:"";position:absolute;left:-20%;right:-20%;
+    top:18%;height:28%;
+    background:
+      repeating-linear-gradient(90deg,rgba(57,211,83,.15) 0 1.6vw,transparent 1.6vw 2.6vw,
+        rgba(57,211,83,.10) 2.6vw 3.4vw,transparent 3.4vw 5.6vw,
+        rgba(255,90,90,.13) 5.6vw 6.6vw,transparent 6.6vw 8.8vw),
+      repeating-linear-gradient(90deg,transparent 0 .8vw,rgba(255,180,0,.09) .8vw 1.4vw,
+        transparent 1.4vw 4.1vw);
+    -webkit-mask:linear-gradient(0deg,rgba(0,0,0,1),transparent 92%);
+    mask:linear-gradient(0deg,rgba(0,0,0,1),transparent 92%);
+    animation:skyDrift 40s linear infinite alternate}
+  @keyframes skyDrift{from{transform:translateX(-3vw)}to{transform:translateX(3vw)}}
+
+  /* BEAMS — cold searchlights sweeping (sports/quote) */
+  #pageBg.bg-beams i{left:-18%;top:-58%;width:70%;height:200%;opacity:.2;
+    background:conic-gradient(from 158deg at 18% 12%,transparent 0 12deg,
+      rgba(170,210,245,.5) 16deg 22deg,transparent 26deg 34deg,
+      rgba(170,210,245,.36) 38deg 43deg,transparent 47deg 360deg);
+    transform-origin:18% 12%;animation:beamSweep 11s ease-in-out infinite alternate}
+  #pageBg.bg-beams em{left:48%;top:-58%;width:70%;height:200%;opacity:.16;
+    background:conic-gradient(from 202deg at 82% 12%,transparent 0 12deg,
+      rgba(180,215,255,.5) 16deg 23deg,transparent 27deg 360deg);
+    transform-origin:82% 12%;animation:beamSweep 13s ease-in-out infinite alternate-reverse}
+  @keyframes beamSweep{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+
+  /* SKY — soft drifting cloud banks (weather/moon/clock/apod) */
+  #pageBg.bg-sky i{opacity:.5;
+    background:
+      radial-gradient(38vw 13vh at 18% 22%,rgba(150,175,215,.16),transparent 70%),
+      radial-gradient(30vw 11vh at 72% 12%,rgba(150,175,215,.13),transparent 70%);
+    animation:cloudDrift 46s linear infinite}
+  #pageBg.bg-sky em{opacity:.4;
+    background:
+      radial-gradient(44vw 15vh at 60% 70%,rgba(120,150,200,.12),transparent 70%),
+      radial-gradient(26vw 9vh at 30% 85%,rgba(120,150,200,.10),transparent 70%);
+    animation:cloudDrift 70s linear infinite reverse}
+  @keyframes cloudDrift{from{transform:translateX(-6vw)}to{transform:translateX(6vw)}}
+
+  /* WAVES — layered swells rolling along the bottom (LIS chart) */
+  #pageBg.bg-waves i{top:auto;bottom:-4vh;height:22vh;left:-18vw;opacity:.4;
+    background:radial-gradient(9vw 5vh at 50% 100%,transparent 64%,rgba(38,190,224,.4) 66% 72%,transparent 74%);
+    background-size:18vw 22vh;animation:waveRoll 7s linear infinite}
+  #pageBg.bg-waves em{top:auto;bottom:-5.5vh;height:22vh;left:-23vw;opacity:.26;
+    background:radial-gradient(11vw 6vh at 50% 100%,transparent 64%,rgba(60,140,220,.4) 66% 72%,transparent 74%);
+    background-size:23vw 22vh;animation:waveRoll2 11s linear infinite}
+  /* translate one pattern period per loop — compositor-only, no repaints */
+  @keyframes waveRoll{to{transform:translateX(18vw)}}
+  @keyframes waveRoll2{to{transform:translateX(23vw)}}
+
+  /* SPACE — moving galaxy: rotating spiral disc + visibly drifting starfield
+     (moon + NASA pages). All transform animation, GPU-composited. */
+  #pageBg.bg-space i{inset:-30%;opacity:.75;
+    background-image:
+      radial-gradient(circle,rgba(215,228,255,.9) 0 1px,transparent 1.6px),
+      radial-gradient(circle,rgba(160,190,255,.55) 0 1px,transparent 1.4px);
+    background-size:6vw 8vh,3.5vw 5vh;background-position:0 0,2vw 3vh;
+    animation:spaceDrift 34s linear infinite alternate}
+  #pageBg.bg-space em{inset:-30%;opacity:.6;
+    background:
+      radial-gradient(28vw 18vh at 24% 66%,rgba(30,95,170,.18),transparent 70%),
+      radial-gradient(circle,rgba(255,240,200,.8) 0 1px,transparent 1.5px);
+    background-size:100% 100%,11vw 13vh;
+    animation:spaceDrift2 52s linear infinite alternate}
+  @keyframes spaceDrift{from{transform:translate(0,0)}to{transform:translate(-9vw,4.5vh)}}
+  @keyframes spaceDrift2{from{transform:translate(0,0)}to{transform:translate(7vw,-4vh)}}
+  /* the Milky Way: a dense diagonal star band with nebula glow and a dark
+     dust lane, drifting along its own axis — reads instantly as the galaxy */
+  #pageBg.bg-space::before{content:"";position:absolute;left:-30%;top:-12%;
+    width:160%;height:124%;
+    background:
+      radial-gradient(60vw 10vh at 30% 46%,rgba(215,190,255,.20),transparent 70%),
+      radial-gradient(52vw 8vh at 66% 52%,rgba(140,195,255,.18),transparent 70%),
+      radial-gradient(circle,rgba(238,242,255,.95) 0 1px,transparent 1.5px),
+      radial-gradient(circle,rgba(255,232,190,.85) 0 1px,transparent 1.4px),
+      radial-gradient(circle,rgba(205,222,255,.75) 0 .8px,transparent 1.2px);
+    background-size:100% 100%,100% 100%,2.1vw 3.1vh,3.3vw 4.4vh,1.4vw 2.2vh;
+    background-position:0 0,0 0,0 0,1vw 1vh,.4vw 2vh;
+    -webkit-mask:linear-gradient(180deg,transparent,rgba(0,0,0,.95) 34% 66%,transparent);
+    mask:linear-gradient(180deg,transparent,rgba(0,0,0,.95) 34% 66%,transparent);
+    animation:mwDrift 60s linear infinite alternate}
+  #pageBg.bg-space::after{content:"";position:absolute;left:-30%;top:-12%;
+    width:160%;height:124%;
+    background:radial-gradient(74vw 4.5vh at 48% 50%,rgba(4,7,13,.85),transparent 75%);
+    animation:mwDrift 60s linear infinite alternate}
+  @keyframes mwDrift{from{transform:rotate(-24deg) translateX(-4%)}
+                     to{transform:rotate(-24deg) translateX(4%)}}
+
+  /* FIELD — stadium turf rushing under the sports page: mowing stripes,
+     yard lines, floodlight glow at the horizon */
+  #pageBg.bg-field{perspective:600px}
+  #pageBg.bg-field i{top:46%;height:220%;transform-origin:top center;opacity:.42;
+    background:
+      repeating-linear-gradient(0deg,rgba(235,248,255,.5) 0 3px,transparent 3px 12vh),
+      repeating-linear-gradient(90deg,rgba(46,120,64,.5) 0 9vw,rgba(32,92,48,.5) 9vw 18vw);
+    animation:fieldRush 6s linear infinite}
+  @keyframes fieldRush{from{transform:rotateX(74deg) translateY(-12vh)}
+                       to{transform:rotateX(74deg) translateY(0)}}
+  #pageBg.bg-field em{top:36%;height:24%;
+    background:radial-gradient(ellipse 75% 100% at 50% 60%,rgba(190,230,255,.22),transparent 70%)}
+
+  /* STARS — denser twinkle field (news/default) */
+  #pageBg.bg-stars i{opacity:.5;
+    background-image:radial-gradient(circle,rgba(190,210,255,.8) 0 1px,transparent 1.7px);
+    background-size:5.5vw 7vh;animation:twinkle 4s ease-in-out infinite alternate}
+  #pageBg.bg-stars em{opacity:.3;
+    background-image:radial-gradient(circle,rgba(255,220,160,.7) 0 1px,transparent 1.7px);
+    background-size:9vw 12vh;background-position:3vw 4vh;
+    animation:twinkle 5.5s ease-in-out infinite alternate-reverse}
+  @keyframes twinkle{from{opacity:.14}to{opacity:.5}}
+
+  /* 3D hand-off: outgoing page falls away behind the incoming one */
+  .spotGhost{position:absolute;z-index:0;pointer-events:none;overflow:hidden;
+    font-weight:700;font-size:7.2vh;line-height:1.14;max-width:92vw;
+    letter-spacing:-.01em;transform-style:preserve-3d;
+    animation:pageOut .85s cubic-bezier(.55,0,.85,.36) both}
+  @keyframes pageOut{to{opacity:0;transform:translateY(-6vh) translateZ(-420px) rotateX(-15deg)}}
+
+  /* extruded 3D type on the hero numerals */
+  .score-row .num,.fw-big .n,.cm .v,.wc .time,.tr .m,.mh-year{
+    text-shadow:0 2px 0 rgba(10,14,22,.9),0 4px 0 rgba(8,11,18,.75),
+                0 6px 0 rgba(6,9,15,.55),0 9px 18px rgba(0,0,0,.65)}
+
+  /* light sweep gliding across cards */
+  .mk-panel,.mk-tile,.mini,.wh-tile{position:relative;overflow:hidden}
+  .mk-panel::after,.mk-tile::after,.mini::after,.wh-tile::after{content:"";
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.09) 50%,transparent 58%);
+    transform:translateX(-160%);animation:sheen 6.5s ease-in-out infinite}
+  .mk-tile::after{animation-delay:1.1s}.mini::after{animation-delay:2.2s}
+  .wh-tile::after{animation-delay:3s}
+  @keyframes sheen{0%,55%{transform:translateX(-160%)}75%,100%{transform:translateX(160%)}}
+
+  /* ══════ INTRO SEQUENCES — target-acquisition style (Anduril/Palantir):
+     a wireframe contact crosses the frame tracked by a reticle with typed
+     telemetry. Slow, deliberate motion; ~4.6s before the data page holds. */
+  .intro{position:absolute;inset:-4vh -5vw;z-index:5;pointer-events:none;
+    color:#4fd7e8;animation:introHide .5s 4.5s both}
+  @keyframes introHide{to{opacity:0;visibility:hidden}}
+  .intro>span{position:absolute;display:block}
+  .intro .wire{width:100%;height:auto;display:block;
+    filter:drop-shadow(0 0 7px rgba(79,215,232,.45))}
+  .intro .ret{position:absolute;left:-4%;top:-18%;width:108%;height:136%;
+    color:var(--amber);opacity:.9;animation:retPulse 1.1s ease-in-out infinite alternate}
+  @keyframes retPulse{from{opacity:.55}to{opacity:1}}
+  .intro .tlm{position:absolute;left:2%;top:104%;font-family:var(--mono);
+    font-size:2vh;letter-spacing:.14em;color:var(--amber);white-space:nowrap;
+    overflow:hidden;width:0;border-right:2px solid var(--amber);
+    animation:type 1.3s steps(26,end) .9s forwards}
+  @keyframes type{to{width:102%}}
+  /* dashed track line drawn behind the contact */
+  .intro::before{content:"";position:absolute;left:0;right:0;height:0;
+    border-top:2px dashed rgba(79,215,232,.28);top:var(--trkline,50%);
+    transform:scaleX(0);transform-origin:var(--trkorigin,left);
+    animation:trkLine 4s linear both}
+  @keyframes trkLine{to{transform:scaleX(1)}}
+  /* contact flight paths — slower, no cartoon banking */
+  .ip{top:15vh;left:0;width:48vw;--trkline:32vh;
+    animation:flyBy 4.3s cubic-bezier(.35,.05,.65,.95) both}
+  @keyframes flyBy{from{transform:translateX(-56vw) translateY(4vh) scale(.9)}
+                   to{transform:translateX(112vw) translateY(-3vh) scale(1)}}
+  .itr{bottom:10vh;left:0;width:74vw;
+    animation:rollBy 4.3s cubic-bezier(.3,.1,.7,.9) both}
+  @keyframes rollBy{from{transform:translateX(108vw)}to{transform:translateX(-86vw)}}
+  .intro-train{--trkline:78%;--trkorigin:right}
+  .ijp{bottom:8vh;left:0;width:32vw;--trkline:82%;
+    animation:jeepBy 4.3s cubic-bezier(.4,.1,.6,.9) both}
+  @keyframes jeepBy{from{transform:translateX(-36vw)}50%{transform:translateX(36vw)}
+                    to{transform:translateX(110vw)}}
+  .itor{top:6vh;left:0;width:20vw;--trkline:24vh;
+    animation:torBy 4.4s cubic-bezier(.4,.1,.6,.9) both}
+  @keyframes torBy{from{transform:translateX(-24vw) rotate(-2deg)}
+                   to{transform:translateX(116vw) rotate(2deg)}}
+  .intro-storm::before{content:"";position:absolute;top:-2vh;left:-8vw;right:-8vw;height:15vh;
+    background:radial-gradient(40vw 12vh at 30% 40%,rgba(40,50,70,.85),transparent 70%),
+               radial-gradient(46vw 13vh at 70% 30%,rgba(30,38,56,.85),transparent 70%);
+    animation:bandDrift 4.5s linear both}
+  @keyframes bandDrift{from{transform:translateX(-4vw)}to{transform:translateX(4vw)}}
+  .intro-storm::after{content:"";position:absolute;inset:-25% -12%;
+    background:repeating-linear-gradient(115deg,transparent 0 13px,rgba(120,160,220,.15) 13px 15px);
+    animation:rainDrift 1.1s linear infinite}
+  @keyframes rainDrift{to{transform:translate(-5vw,5vh)}}
+  .tw{animation:twSway 1.5s ease-in-out infinite alternate}
+  @keyframes twSway{from{transform:translateX(-7px)}to{transform:translateX(7px)}}
+  /* candlesticks sprout on the markets page then clear (shorter sequence) */
+  .intro-candles{animation:introHide .45s 2.4s both}
+  .icd{bottom:5vh;left:10vw;width:58vw}
+  .cd{transform-box:fill-box;transform-origin:50% 100%;
+      animation:cdGrow .55s cubic-bezier(.2,1.4,.4,1) both}
+  @keyframes cdGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  /* spinning wheels on any vehicle */
+  .wh{animation:wheelSpin .85s linear infinite}
+  @keyframes wheelSpin{to{transform:rotate(360deg)}}
+
+  /* content choreography behind the intros — data holds until the
+     acquisition sequence completes (~4.5s) */
+  .intro-stage .radar{animation:radarDrop .8s 4s cubic-bezier(.25,1.2,.4,1) both}
+  @keyframes radarDrop{from{opacity:0;transform:rotateX(10deg) translateY(-75vh)}
+                       to{opacity:1;transform:rotateX(10deg)}}
+  .intro-stage .fl-info{animation:riseIn .5s 4.7s both}
+  .radar .plane{animation:blipPop .5s cubic-bezier(.2,1.7,.4,1) both;
+                animation-delay:calc(4.5s + var(--bi,0)*.15s)}
+  @keyframes blipPop{from{opacity:0;transform:translate(-50%,-50%) rotate(var(--hdg)) scale(0)}
+                     to{opacity:1;transform:translate(-50%,-50%) rotate(var(--hdg)) scale(1)}}
+  .introed .tr{animation-delay:calc(4.4s + var(--i,0)*.12s)}
+  .introed .tr-track .tr-anim{animation-delay:4.7s}
+  .cm{animation:riseIn .55s 4.3s both}
+  .cm:nth-child(2){animation-delay:4.5s}
+  .cm-road{animation:riseIn .5s 4.7s both}
+  .cm-road .cm-anim{animation-delay:4.8s}
+  .wt-stage{position:relative}
+  .wt-stage .wt{animation-delay:calc(4.4s + var(--i,0)*.08s),calc(var(--i,0)*-1.9s)}
+  .wt-stage .radar-img{animation:riseIn .6s 4.6s both}
+
+  /* svg art sizing (replaces the old emoji glyphs) */
+  .tr-anim,.cm-anim{color:#4fd7e8}
+  .tr-anim svg,.cm-anim svg{filter:drop-shadow(0 0 5px rgba(79,215,232,.4))}
+  .tr-anim svg{height:9vh;width:auto;display:block}
+  .cm-anim svg{height:7.5vh;width:auto;display:block}
+  .radar .plane{width:3.4vh;height:3.6vh;font-size:0}
+  .radar .plane svg{width:100%;height:100%;fill:currentColor;
+    filter:drop-shadow(0 0 6px rgba(159,197,232,.7))}
+  .radar .plane.near{width:4.4vh;height:4.6vh}
+  .radar .plane.near svg{filter:drop-shadow(0 0 9px rgba(255,180,0,.8))}
+  .wt .e svg{height:5vh;width:auto}
+  .wk .e svg{height:5.6vh;width:auto}
+  #wx1V svg,#wx2V svg{height:3.4vh;width:auto;vertical-align:-.8vh}
+  .pg-wm svg{width:26vh;height:26vh;display:block}
+  .pg-wm{color:#e8ecf2}
+  .mn-big svg{width:32vh;height:32vh;display:block;
+    filter:drop-shadow(0 0 26px rgba(232,226,207,.3))}
+  .mn-strip{display:flex;align-items:center;gap:.7vw}
+  .mn-strip svg{width:4.4vh;height:4.4vh;opacity:.5}
+  .mn-strip .cur svg{width:6.2vh;height:6.2vh;opacity:1;
+    filter:drop-shadow(0 0 10px rgba(255,180,0,.7))}
+  .wc .dnd{color:var(--amber)} .wc .dnn{color:#7ea0ff}
+  .wt .ppd{color:#4fc3ff;font-size:1.5vh;margin-right:.3vw}
+
+  /* ── PAINTING OF THE DAY — gallery layout: canvas left, curator card right ── */
+  .art-wrap{display:flex;gap:3.5vw;align-items:center;max-width:92vw}
+  .art-img{max-height:56vh;max-width:40vw;border-radius:.8vh;
+    border:1px solid var(--edge);box-shadow:0 1.5vh 5vh rgba(0,0,0,.65);
+    animation:kenburns 32s ease-in-out infinite alternate}
+  .art-info{max-width:46vw}
+  .art-info .t{font-size:4.6vh;font-weight:700;line-height:1.15;text-wrap:balance}
+  .art-info .a{font-family:var(--mono);font-size:2.3vh;color:var(--amber);
+    margin-top:1.2vh;letter-spacing:.06em}
+  .art-info .d{font-size:2.9vh;font-weight:500;line-height:1.45;color:var(--ink);
+    margin-top:2vh;display:-webkit-box;-webkit-line-clamp:7;
+    -webkit-box-orient:vertical;overflow:hidden}
+  .art-info .c{font-family:var(--mono);font-size:1.8vh;letter-spacing:.22em;
+    color:var(--ink-faint);margin-top:2.2vh}
+
+  /* ── NASA APOD ── */
+  .ap-wrap{display:flex;flex-direction:column;gap:1.4vh;max-width:90vw}
+  .ap-img{max-width:88vw;max-height:50vh;object-fit:contain;border-radius:1.4vh;
+          border:1px solid var(--edge);box-shadow:0 1vh 4vh rgba(0,0,0,.5)}
+  .ap-title{font-size:4vh;font-weight:700}
+  .ap-credit{font-family:var(--mono);font-size:2vh;color:var(--ink-faint);letter-spacing:.15em}
+
+  /* ── FED WATCH ── */
+  .fw-wrap{display:flex;align-items:center;gap:7vw}
+  .fw-big .n{font-family:var(--mono);font-weight:800;font-size:17vh;color:var(--amber);
+             line-height:1;font-variant-numeric:tabular-nums;
+             animation:fedPulse 2.6s ease-in-out infinite}
+  @keyframes fedPulse{0%,100%{text-shadow:0 0 16px rgba(255,180,0,.2)}
+                      50%{text-shadow:0 0 44px rgba(255,180,0,.6)}}
+  .fw-big .l{font-family:var(--mono);font-size:2.6vh;letter-spacing:.25em;color:var(--ink-dim)}
+  .fw-big .w{font-family:var(--mono);font-size:2.4vh;color:var(--cyan);margin-top:1vh}
+  .fw-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4vh 4vw}
+  .fw-mt{display:flex;gap:1.2vw;align-items:baseline;font-family:var(--mono);font-size:3.4vh}
+  .fw-mt.past{opacity:.3}
+  .fw-mt.next .d{color:var(--amber)}
+  .fw-mt .d{font-weight:800}
+  .fw-mt .sep{font-size:1.9vh;color:var(--purple);border:1px solid var(--purple);
+              border-radius:.6vh;padding:.1vh .5vw}
+
+  /* ── METRO-NORTH ── */
+  .tr-wrap{display:flex;flex-direction:column;gap:1.7vh;font-family:var(--mono)}
+  .tr{display:flex;align-items:baseline;gap:2.5vw}
+  .tr .m{font-weight:800;font-size:7vh;color:var(--cyan);min-width:15vw;
+         font-variant-numeric:tabular-nums}
+  .tr .t{font-size:3.6vh;color:var(--ink);font-weight:700}
+  .tr .d{font-size:2.6vh;color:var(--ink-faint)}
+  /* train rolls along a dashed track at the bottom of the page (emoji face
+     left, so it travels right-to-left) */
+  .tr-track{position:relative;margin-top:2.6vh;height:9vh;width:86vw;overflow:hidden}
+  .tr-track::after{content:"";position:absolute;left:0;right:0;bottom:1.4vh;height:.4vh;
+    background:repeating-linear-gradient(90deg,var(--edge) 0 3vw,transparent 3vw 4.4vw)}
+  .tr-anim{position:absolute;bottom:1.9vh;left:0;font-size:6.4vh;line-height:1;
+    white-space:nowrap;animation:trainRun 13s linear infinite}
+  @keyframes trainRun{from{transform:translateX(88vw)}to{transform:translateX(-60vw)}}
+
+  /* ── NIGHT AMBIENT SCENES — explicit stage heights: these scenes are all
+     absolute-positioned art, and spotBody has no natural height ── */
+  .amb-video{display:block;width:calc(100% + 10vw);height:64vh;margin:-1vh -5vw;
+    object-fit:cover;border-radius:1vh}
+  .amb-yt{border:0;background:#000}
+  .amb-aurora{position:relative;height:60vh;width:calc(100% + 10vw);
+    margin:0 -5vw;overflow:hidden}
+  .amb-aurora i{position:absolute;width:56%;top:-35%;height:135%;
+    filter:blur(2.2vh);opacity:.8;transform:skewX(-14deg)}
+  .amb-aurora i:nth-child(1){left:-10%;
+    background:linear-gradient(180deg,transparent 4%,rgba(57,231,141,.75) 26%,rgba(38,208,224,.5) 56%,transparent 88%);
+    animation:aur 13s ease-in-out infinite alternate}
+  .amb-aurora i:nth-child(2){left:24%;
+    background:linear-gradient(180deg,transparent 6%,rgba(38,208,224,.68) 30%,rgba(150,95,235,.48) 62%,transparent 90%);
+    animation:aur 17s ease-in-out -6s infinite alternate-reverse}
+  .amb-aurora i:nth-child(3){left:58%;
+    background:linear-gradient(180deg,transparent 4%,rgba(150,95,235,.6) 26%,rgba(57,231,141,.42) 58%,transparent 88%);
+    animation:aur 21s ease-in-out -11s infinite alternate}
+  @keyframes aur{from{transform:skewX(-17deg) translateX(-6vw);opacity:.55}
+                 to{transform:skewX(-7deg) translateX(7vw);opacity:.95}}
+  .amb-aurora b{position:absolute;inset:0;
+    background-image:radial-gradient(circle,rgba(220,230,255,.9) 0 1px,transparent 1.5px);
+    background-size:5vw 7vh;opacity:.6}
+  /* dark treeline silhouette grounds the scene */
+  .amb-aurora::after{content:"";position:absolute;left:0;right:0;bottom:0;height:9vh;
+    background:
+      radial-gradient(16vw 8vh at 10% 100%,#05070c 60%,transparent 62%),
+      radial-gradient(22vw 10vh at 36% 100%,#05070c 60%,transparent 62%),
+      radial-gradient(18vw 7.5vh at 64% 100%,#05070c 60%,transparent 62%),
+      radial-gradient(24vw 9vh at 92% 100%,#05070c 60%,transparent 62%)}
+  .amb-solar{position:relative;height:60vh;display:block}
+  .amb-solar .sun{position:absolute;left:50%;top:50%;width:6vh;height:6vh;
+    margin:-3vh;border-radius:50%;
+    background:radial-gradient(circle,#fff3c4,#ffb400 55%,#ff7a00);
+    box-shadow:0 0 8vh rgba(255,180,0,.75),0 0 20vh rgba(255,140,0,.3);
+    animation:sunPulse 4s ease-in-out infinite alternate}
+  @keyframes sunPulse{to{box-shadow:0 0 11vh rgba(255,180,0,.9),0 0 26vh rgba(255,140,0,.4)}}
+  .amb-solar .ring{position:absolute;left:50%;top:50%;border-radius:50%;
+    border:1px solid rgba(120,160,205,.16);transform:translate(-50%,-50%)}
+  .amb-solar .orb{position:absolute;left:50%;top:50%;margin:0;border-radius:50%;
+    transform:translate(-50%,-50%);animation:orbSpin linear infinite}
+  .amb-solar .orb b{position:absolute;left:50%;top:0;border-radius:50%;
+    transform:translate(-50%,-50%)}
+  @keyframes orbSpin{from{transform:translate(-50%,-50%) rotate(0)}
+                     to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+  /* ── WORLD CLOCK — clocks over a live world map with pinging city marks ── */
+  .wc-stage{position:relative}
+  .wc-map{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+    width:84vw;opacity:.55;pointer-events:none}
+  .wc-map .wcm .ring{transform-box:fill-box;transform-origin:center;
+    animation:wcPing 2.6s ease-out infinite;animation-delay:var(--d,0s)}
+  @keyframes wcPing{from{transform:scale(1);opacity:.9}to{transform:scale(4.5);opacity:0}}
+  .wc-wrap{position:relative;z-index:1;display:flex;gap:4.5vw;align-items:flex-start}
+  .wc{display:flex;flex-direction:column;align-items:center;gap:1.2vh}
+  .wc .face{position:relative;width:19vh;height:19vh;border-radius:50%;
+            background:radial-gradient(circle at 35% 30%,#1c2230,#10141d 70%);
+            border:2px solid var(--edge);
+            box-shadow:inset 0 .4vh 1.2vh rgba(0,0,0,.55),0 .6vh 2.4vh rgba(0,0,0,.35)}
+  .wc .face.day{background:radial-gradient(circle at 35% 30%,#2a3348,#171d2a 70%);
+            border-color:#3a4a60}
+  .wc .face i{position:absolute;left:50%;bottom:50%;transform-origin:50% 100%;
+            border-radius:1vh;background:var(--ink)}
+  .wc .face i.h{width:.9vh;height:4.6vh;margin-left:-.45vh}
+  .wc .face i.m{width:.55vh;height:6.8vh;margin-left:-.275vh}
+  .wc .face i.s{width:.2vh;height:7.6vh;margin-left:-.1vh;background:var(--amber)}
+  .wc .face b{position:absolute;left:50%;top:50%;width:1.4vh;height:1.4vh;
+            transform:translate(-50%,-50%);border-radius:50%;background:var(--amber)}
+  .wc .city{font-family:var(--mono);font-size:2.4vh;letter-spacing:.18em;color:var(--ink-dim)}
+  .wc .city span{color:var(--amber);font-size:1.8vh;margin-left:.6vw}
+  .wc .time{font-family:var(--mono);font-weight:800;font-size:5.6vh;line-height:1;
+            font-variant-numeric:tabular-nums}
+  .wc .sub{font-family:var(--mono);font-size:2.2vh;color:var(--ink-faint)}
+
+  /* ── COMMUTE ── */
+  .cm-wrap{display:flex;gap:6vw;font-family:var(--mono)}
+  .cm .l{font-size:2.6vh;letter-spacing:.25em;color:var(--ink-dim)}
+  .cm .v{font-weight:800;font-size:11vh;line-height:1.1;color:var(--cyan);
+         font-variant-numeric:tabular-nums}
+  .cm .n{font-size:2.6vh;color:var(--ink-faint);margin-top:.5vh}
+
+  /* ── WHOOP recovery page ── */
+  .wh-wrap{display:flex;align-items:center;gap:5vw}
+  .wh-ring{position:relative;flex:0 0 auto}
+  .wh-ring svg{display:block;height:42vh;width:42vh;transform:rotate(-90deg)}
+  .wh-ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;font-family:var(--mono)}
+  .wh-ring .pct .n{font-size:10vh;font-weight:800;line-height:1}
+  .wh-ring .pct .l{font-size:2.2vh;letter-spacing:.3em;color:var(--ink-dim)}
+  .wh-tiles{display:grid;grid-template-columns:repeat(2,20vw);gap:2vh 2.5vw}
+  .wh-tile{background:var(--card);border:1px solid var(--edge);border-radius:1.2vh;
+           padding:1.6vh 1.4vw;font-family:var(--mono)}
+  .wh-tile .l{font-size:2vh;letter-spacing:.22em;color:var(--ink-dim)}
+  .wh-tile .v{font-size:5.4vh;font-weight:800;font-variant-numeric:tabular-nums}
+
+  /* ── QUOTE page: Vestaboard split-flap board — fills the slide; tile size
+     is computed per-board via --cs so cols x rows always maximize the area ── */
+  .vb-wrap{display:flex;flex-direction:column;align-items:center;
+           gap:calc(var(--cs,3.5vh)*.14);
+           padding:calc(var(--cs,3.5vh)*.4);background:#0a0b0d;
+           border-radius:1.4vh;border:1px solid #1c2027;
+           box-shadow:0 1vh 4vh rgba(0,0,0,.5);width:max-content}
+  .vb-row{display:flex;gap:calc(var(--cs,3.5vh)*.13)}
+  .vb-cell{position:relative;width:var(--cs,3.5vh);height:calc(var(--cs,3.5vh)*1.45);
+           border-radius:calc(var(--cs,3.5vh)*.13);
+           background:linear-gradient(#23272f,#171a20 48%,#0d0f13 52%,#181b21);
+           font-family:var(--mono);font-weight:700;
+           font-size:calc(var(--cs,3.5vh)*.98);color:#eef1f6;
+           display:flex;align-items:center;justify-content:center;
+           box-shadow:inset 0 .2vh .3vh rgba(255,255,255,.05),inset 0 -.3vh .5vh rgba(0,0,0,.5)}
+  .vb-cell::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+           background:rgba(0,0,0,.65)}
+  .vb-cell.chip{transition:background .3s}
+  .vb-cell.chip.on{background:var(--c);
+           box-shadow:inset 0 .3vh .5vh rgba(255,255,255,.25),inset 0 -.5vh .8vh rgba(0,0,0,.3)}
+
+  /* ── MARKET HISTORY page ── */
+  .mh-wrap{max-width:86vw}
+  .mh-date{font-family:var(--mono);font-size:3vh;letter-spacing:.25em;color:var(--ink-dim)}
+  .mh-year{font-family:var(--mono);font-size:11vh;font-weight:800;color:var(--amber);
+           line-height:1.05;text-shadow:0 0 24px rgba(255,180,0,.25)}
+  .mh-text{font-size:4.6vh;font-weight:600;line-height:1.3;margin-top:1.5vh;text-wrap:balance}
+
+  /* ── MOON page ── */
+  .mn-wrap{display:flex;align-items:center;gap:5vw}
+  .mn-big{font-size:30vh;line-height:1;flex:0 0 auto;
+          filter:drop-shadow(0 0 40px rgba(240,235,190,.35))}
+  .mn-info{font-family:var(--mono)}
+  .mn-info .name{font-size:6vh;font-weight:800;color:var(--amber);font-family:var(--sans)}
+  .mn-info .illum{font-size:3.2vh;color:var(--ink-dim);letter-spacing:.15em;margin-top:1vh}
+  .mn-info .next{font-size:2.8vh;color:var(--cyan);letter-spacing:.12em;margin-top:2.4vh;line-height:1.7}
+  .mn-strip{font-size:5vh;margin-top:3vh;letter-spacing:.6vw}
+  .mn-strip .cur{font-size:6.6vh;filter:drop-shadow(0 0 10px rgba(255,180,0,.8))}
+
+  /* ── LONG ISLAND SOUND nautical chart ── */
+  .lis-wrap{display:flex;gap:3vw;align-items:center}
+  .lis-map{height:52vh;flex:0 0 auto;border:1px solid var(--edge);border-radius:1.2vh;
+           background:linear-gradient(180deg,#07131f,#0a1a2c 55%,#0b1e33)}
+  .lis-map svg{height:100%;display:block}
+  .lis-map text{font-family:var(--mono);fill:#4a6a8a;letter-spacing:.15em}
+  /* Each buoy blinks at its real NOAA flash period via animation-duration;
+     50/50 duty cycle (CSS keyframes can't take per-element percentages). */
+  .buoy{animation:buoyblink var(--per,3s) infinite step-end}
+  @keyframes buoyblink{0%{opacity:1}50%{opacity:.15}100%{opacity:1}}
+  .lis-info{font-family:var(--mono)}
+  .lis-info .row{margin-bottom:2.4vh}
+  .lis-info .l{font-size:2.2vh;letter-spacing:.22em;color:var(--ink-dim)}
+  .lis-info .v{font-size:6vh;font-weight:800;color:var(--cyan);
+               font-variant-numeric:tabular-nums;line-height:1.15}
+  .lis-info .v.gold{color:var(--amber)}
+
+  /* ── WEATHER TODAY: hourly grid + doppler ── */
+  .wt-wrap{display:flex;gap:2.5vw;align-items:center}
+  .wt-hours{display:grid;grid-template-columns:repeat(5,1fr);gap:1.4vh 1vw;flex:1}
+  .wt{background:var(--card);border:1px solid var(--edge);border-radius:1vh;
+      text-align:center;padding:1.2vh 0;font-family:var(--mono)}
+  .wt .d{font-size:2.1vh;letter-spacing:.12em;color:var(--ink-dim)}
+  .wt .e{font-size:4.6vh;line-height:1.3}
+  .wt .t{font-size:3.8vh;font-weight:800}
+  .wt .p{font-size:2vh;color:var(--cyan);min-height:2.4vh}
+  .radar-img{height:52vh;max-width:44vw;object-fit:cover;object-position:center;
+             border:1px solid var(--edge);border-radius:1.2vh;flex:0 0 auto}
+
+  /* ── 7-DAY WEATHER ── */
+  .wk-wrap{display:flex;gap:1.6vw}
+  .wk{flex:1;background:var(--card);border:1px solid var(--edge);border-radius:1.2vh;
+      padding:2vh 0;text-align:center;font-family:var(--mono)}
+  .wk.today{border-color:var(--amber);box-shadow:0 0 18px rgba(255,180,0,.12)}
+  .wk .d{font-size:2.6vh;letter-spacing:.2em;color:var(--ink-dim)}
+  .wk .e{font-size:7vh;line-height:1.4}
+  .wk .hi{font-size:4.4vh;font-weight:800;color:var(--ink)}
+  .wk .lo{font-size:3vh;color:var(--ink-faint)}
+
+  /* ── WORK TO-DO ── */
+  .td-wrap{display:flex;flex-direction:column;gap:1.6vh;max-width:80vw}
+  .td{display:flex;align-items:baseline;gap:1.4vw;font-size:4.6vh;font-weight:700}
+  .td .box{flex:0 0 auto;width:3vh;height:3vh;border:.45vh solid var(--amber);
+           border-radius:.6vh;align-self:center}
+  .td .note{font-size:2.8vh;font-weight:400;color:var(--ink-dim);font-family:var(--mono)}
+  .td.done{opacity:.35;text-decoration:line-through}
+
+  .tickerbar{flex:0 0 auto;display:flex;align-items:center;overflow:hidden}
+  #databar{height:7.5vh;background:#0a0d18;border-top:2px solid var(--edge)}
+  #newsbar{height:9.5vh;background:linear-gradient(180deg,#0d1120,#0a0d18);
+           border-top:2px solid var(--blue)}
+  .tag{flex:0 0 auto;height:100%;display:flex;align-items:center;padding:0 1.6vw;
+       font-family:var(--mono);font-weight:800;letter-spacing:.18em;color:#fff;z-index:2}
+  #databar .tag{background:var(--teal);font-size:2.2vh}
+  #newsbar .tag{background:var(--blue);font-size:2.6vh}
+  .ticker{flex:1;overflow:hidden;white-space:nowrap;height:100%;display:flex;align-items:center}
+  .ticker-inner{display:inline-block;white-space:nowrap;font-family:var(--mono);
+                padding-left:100vw;will-change:transform}
+  #dataInner{font-size:3.4vh;animation:scroll 45s linear infinite}
+  #newsInner{font-size:4.2vh;animation:scroll 80s linear infinite}
+  .ticker-inner b{color:var(--amber);font-weight:700}
+  .ticker-inner .sep{color:var(--ink-faint);margin:0 1.8vw}
+  .ticker-inner .up{color:var(--up)} .ticker-inner .down{color:var(--down)}
+  .ticker-inner .cy{color:var(--cyan)} .ticker-inner .src{color:var(--ink-faint)}
+  @keyframes scroll{to{transform:translateX(-100%)}}
+
+  #alert{position:fixed;inset:0;z-index:10000;display:none;flex-direction:column;
+         justify-content:center;align-items:flex-start;padding:6vh 6vw;background:var(--ground)}
+  #alert.show{display:flex}
+  #alert::before{content:"";position:absolute;inset:0;pointer-events:none;
+    border:1.4vh solid var(--acol);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  #alertKicker{font-family:var(--mono);font-size:4.5vh;font-weight:800;letter-spacing:.34em;
+               color:#fff;background:var(--acol);padding:1vh 2vw;margin-bottom:3.5vh;
+               animation:pulse 1.1s ease-in-out infinite}
+  #alertBody{font-weight:800;font-size:8.5vh;line-height:1.1;text-wrap:balance;max-width:88vw}
+  #alertSub{font-family:var(--mono);font-size:3vh;color:var(--ink-dim);margin-top:3vh;
+            letter-spacing:.1em;text-transform:uppercase;max-width:88vw;line-height:1.5;
+            white-space:normal}
+  #alert.nws{--acol:var(--red)}
+  #alert.watch{--acol:var(--amber)}
+  #alert.breaking{--acol:var(--blue)}
+
+  #alertStrip{display:none;flex:0 0 auto;height:4.5vh;align-items:center;gap:1.5vw;
+    background:var(--red);color:#fff;padding:0 2vw;
+    font-family:var(--mono);font-weight:700;font-size:2.6vh;letter-spacing:.1em}
+  #alertStrip.show{display:flex}
+  #alertStrip .puls{animation:pulse 1.1s infinite}
+</style>
+</head>
+<body>
+<!-- Ambient depth field: two parallax particle layers + volumetric orbs.
+     Transform-only animation — composited on the Pi GPU, near-zero CPU. -->
+<div id="depth" aria-hidden="true">
+  <i class="l1"></i><i class="l2"></i>
+  <b class="o1"></b><b class="o2"></b><b class="o3"></b>
+  <s class="shoot"></s><s class="shoot s2"></s>
+</div>
+
+<div id="topbar">
+  <canvas id="wordmark" width="212" height="30"></canvas>
+  <div>
+    <div id="clock">--:--</div>
+    <div id="dateline">—</div>
+  </div>
+  <div class="top-wx">
+    <div class="wx-slot"><div class="l">GREENWICH</div><div class="v" id="wx1V">—</div></div>
+    <div class="wx-slot"><div class="l">THE LAKE</div><div class="v" id="wx2V">—</div></div>
+    <div id="proxyDot" title="proxy status"></div>
+  </div>
+</div>
+
+<div id="alertStrip"><span class="puls">▲!</span><span id="alertStripTxt"></span></div>
+
+<div id="spot">
+  <div id="pageBg" aria-hidden="true"><i></i><em></em></div>
+  <div id="hud" aria-hidden="true">
+    <s class="c1"></s><s class="c2"></s><s class="c3"></s><s class="c4"></s>
+    <i class="scan"></i><span id="hudTlm"></span>
+  </div>
+  <div id="spotKicker"><span class="bar"></span><span id="spotKickerTxt">DEWS FEED</span></div>
+  <div id="spotBody">Starting up…</div>
+  <div id="spotSub"></div>
+  <div id="spotDots"></div>
+</div>
+
+<div class="tickerbar" id="databar">
+  <span class="tag">DATA</span>
+  <div class="ticker"><span class="ticker-inner" id="dataInner">loading market + sports data…</span></div>
+</div>
+<div class="tickerbar" id="newsbar">
+  <span class="tag">NEWS</span>
+  <div class="ticker"><span class="ticker-inner" id="newsInner">loading headlines…</span></div>
+</div>
+
+<div id="alert">
+  <div id="alertKicker">ALERT</div>
+  <div id="alertBody"></div>
+  <div id="alertSub"></div>
+</div>
+
+<script src="secrets.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════ */
+const CFG = {
+  // Keys live in secrets.js (untracked) — merged over CFG at load
+  owmKey:  "",
+  fredKey: "",
+  gmapsKey:"",
+  office:{lat:41.0262, lon:-73.6255, addr:"100 Mason St Greenwich CT"},
+  lake:  {lat:41.4087, lon:-75.3813, addr:"1133 Indian Dr, Lake Ariel PA"},
+  home:  {lat:41.0534, lon:-73.5387},   // for the keyless OSRM traffic fallback
+  homeAddr:"Red Fox Rd Stamford CT",
+  todewToken:"",   // ToDew sync — matches Worker HEALTH_TOKEN + app Settings
+  // Night ambient video (volcano loop). Local file preferred when present;
+  // otherwise streams the YouTube embed below.
+  nightVideo:"night_volcano.mp4",
+  nightVideoYT:"bLDn39swGIU",   // 4K Polynesian volcano loop (YouTube)
+  ambientEveryCycles:2,      // full rotations between night ambient breaks
+  ambientNightStart:20, ambientNightEnd:6,   // scenes run 8pm-6am
+  // Flight box recentered on 100 Mason (office is the radar bullseye)
+  flightBox:{lamin:40.58, lomin:-74.33, lamax:41.47, lomax:-72.92},
+  whoopRelay:"",
+  pnbkLogo:"https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://patriotbank.com&size=128",
+  pnbkLogoAlt:"https://icons.duckduckgo.com/ip3/patriotbank.com.ico",
+  favorites:["BOS","NYM","NYY","NYG","NYJ","NE","BRK","NYK","NYR","NJD","PHI","USA"],
+  proxy:"http://localhost:8787",
+  spotSeconds:12,
+  breakingShowSeconds:75,
+  nwsShowSeconds:90,
+};
+Object.assign(CFG, window.SECRETS||{});   // real keys ride in from secrets.js
+let PROXY_OK=false;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function jget(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json();}
+async function tget(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.text();}
+const viaProxy=u=>CFG.proxy+"/p?u="+encodeURIComponent(u);
+
+const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{},
+          games:[], natNews:[], locNews:[], bankNews:[], sportsNews:[], traffic:null,
+          tides:null, lakeTemp:null, flights:[], forecast:[], hourly:[],
+          buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null };
+
+/* ── clock + wordmark ── */
+function tick(){
+  const d=new Date();
+  let h=d.getHours()%12;if(!h)h=12;
+  $("clock").textContent=h+":"+String(d.getMinutes()).padStart(2,"0");
+  const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+  const mos=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  $("dateline").textContent=days[d.getDay()]+" · "+mos[d.getMonth()]+" "+d.getDate();
+}
+tick();setInterval(tick,5000);
+document.addEventListener("mousemove",()=>document.body.classList.add("mouse"),{once:true});
+
+const F={D:["11110","10001","10001","10001","10001","10001","11110"],
+E:["11111","10000","10000","11110","10000","10000","11111"],
+W:["10001","10001","10001","10101","10101","10101","01010"],
+S:["01111","10000","10000","01110","00001","00001","11110"],
+F:["11111","10000","10000","11110","10000","10000","10000"],
+" ":["00000","00000","00000","00000","00000","00000","00000"]};
+(function(){
+  const cv=$("wordmark"),ctx=cv.getContext("2d");
+  const word="DEWS FEED",dot=3,gap=1,adv=6*(dot+gap);
+  cv.width=word.length*adv;cv.height=7*(dot+gap);
+  [...word].forEach((ch,ci)=>{const g=F[ch]||F[" "];
+    for(let r=0;r<7;r++)for(let c=0;c<5;c++){
+      const on=g[r][c]==="1";
+      ctx.fillStyle=on?"#ffb400":"rgba(255,180,0,.07)";
+      if(on){ctx.shadowColor="rgba(255,180,0,.8)";ctx.shadowBlur=4}else ctx.shadowBlur=0;
+      ctx.beginPath();ctx.arc(ci*adv+c*(dot+gap)+dot/2,r*(dot+gap)+dot/2,dot/2,0,7);ctx.fill();
+    }});
+})();
+
+/* ══════════════ ALERT ENGINE ══════════════ */
+const seenAlerts=new Set(JSON.parse(localStorage.getItem("dfSeen")||"[]"));
+function rememberSeen(k){seenAlerts.add(k);
+  localStorage.setItem("dfSeen",JSON.stringify([...seenAlerts].slice(-200)));}
+let alertTimer=null, activeWarning=null;
+
+/* Alert chime — synthesized with WebAudio, no sound files needed. Plays out
+   the Pi's HDMI audio (monitor speakers) or 3.5mm jack. Kiosk launches with
+   autoplay allowed, so no user gesture is required on the Pi. */
+function chime(kind){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==="suspended")ctx.resume();
+    const t0=ctx.currentTime;
+    const tone=(f,st,d,g,type)=>{
+      const o=ctx.createOscillator(),v=ctx.createGain();
+      o.type=type||"sine";o.frequency.value=f;
+      v.gain.setValueAtTime(0.0001,t0+st);
+      v.gain.linearRampToValueAtTime(g||0.22,t0+st+0.02);
+      v.gain.exponentialRampToValueAtTime(0.0001,t0+st+d);
+      o.connect(v);v.connect(ctx.destination);
+      o.start(t0+st);o.stop(t0+st+d+0.05);
+    };
+    if(kind==="breaking"){
+      // Newsroom sting: three ascending notes
+      tone(659,0.00,0.22);
+      tone(880,0.24,0.22);
+      tone(1109,0.48,0.65);
+    }else{
+      // Weather warning: softened EAS-style dual tone, twice
+      tone(853,0.0,0.7,0.14,"square");tone(960,0.0,0.7,0.14,"square");
+      tone(853,0.9,0.7,0.14,"square");tone(960,0.9,0.7,0.14,"square");
+    }
+    setTimeout(()=>ctx.close(),4000);
+  }catch(e){}
+}
+
+function takeover(kind,kicker,body,sub,seconds){
+  chime(kind==="breaking"?"breaking":"nws");
+  const el=$("alert");
+  el.className="show "+kind;
+  $("alertKicker").textContent=kicker;
+  $("alertBody").textContent=body;
+  $("alertSub").textContent=sub||"";
+  clearTimeout(alertTimer);
+  alertTimer=setTimeout(()=>{el.className="";updateStrip();},seconds*1000);
+}
+function updateStrip(){
+  if(activeWarning){
+    $("alertStripTxt").textContent=activeWarning;
+    $("alertStrip").className="show";
+  } else $("alertStrip").className="";
+}
+async function fetchAlerts(){
+  let all=[];
+  for(const loc of [CFG.office,CFG.lake]){
+    try{
+      const j=await jget(`https://api.weather.gov/alerts/active?point=${loc.lat},${loc.lon}`);
+      all=all.concat(j.features||[]);
+    }catch(e){}
+  }
+  const ids=new Set(); all=all.filter(f=>!ids.has(f.id)&&ids.add(f.id));
+  S.alerts=all;
+  activeWarning=null;
+  for(const f of all){
+    const p=f.properties||{};
+    const sev=(p.severity||"").toLowerCase();
+    const isWarning=/warning/i.test(p.event||"")||sev==="extreme"||sev==="severe";
+    if(isWarning){
+      activeWarning=(p.event||"Weather Warning").toUpperCase()+" — until "+
+        (p.ends?new Date(p.ends).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"further notice");
+      if(!seenAlerts.has(f.id)){
+        rememberSeen(f.id);
+        takeover("nws",(p.event||"WEATHER WARNING").toUpperCase(),
+          p.headline||p.event||"Severe weather warning in effect",
+          (p.areaDesc||"")+" · NATIONAL WEATHER SERVICE",
+          CFG.nwsShowSeconds);
+      }
+      break;
+    }
+  }
+  if(!activeWarning){
+    const watch=all.find(f=>/watch|advisory/i.test(f.properties?.event||""));
+    if(watch){
+      const p=watch.properties;
+      activeWarning=(p.event||"").toUpperCase()+
+        (p.ends?" — until "+new Date(p.ends).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"");
+    }
+  }
+  if(!$("alert").classList.contains("show")) updateStrip();
+}
+const BREAKING_RE=/\b(breaking|urgent|just in|live updates?)\b[:\s]|^BREAKING/i;
+function checkBreaking(){
+  for(const h of S.natNews){
+    if(BREAKING_RE.test(h.t)){
+      const key="bn:"+h.t.slice(0,80);
+      if(!seenAlerts.has(key)){
+        rememberSeen(key);
+        takeover("breaking","● BREAKING NEWS",
+          h.t.replace(BREAKING_RE,"").trim(),(h.src||"").toUpperCase(),
+          CFG.breakingShowSeconds);
+        return;
+      }
+    }
+  }
+}
+
+/* ══════════════ helpers ══════════════ */
+function hav(lat1,lon1,lat2,lon2){
+  const R=3959,rad=x=>x*Math.PI/180;
+  const dLa=rad(lat2-lat1),dLo=rad(lon2-lon1);
+  const a=Math.sin(dLa/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function sparkSVG(pts,w,h,color){
+  if(!pts||pts.length<2)return "";
+  const mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1;
+  const step=w/(pts.length-1);
+  const P=pts.map((v,i)=>`${(i*step).toFixed(1)},${(h-((v-mn)/rg)*(h-4)-2).toFixed(1)}`).join(" ");
+  const last=pts.at(-1),first=pts[0];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <polyline points="${P}" fill="none" stroke="${color}" stroke-width="3"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    <polygon points="0,${h} ${P} ${w},${h}" fill="${color}" opacity=".08"/>
+  </svg>`;
+}
+function airlineName(cs){
+  const p=(cs||"").slice(0,3).toUpperCase();
+  const m={AAL:"American",UAL:"United",DAL:"Delta",JBU:"JetBlue",SWA:"Southwest",
+    ASA:"Alaska",FFT:"Frontier",NKS:"Spirit",RPA:"Republic",SKW:"SkyWest",
+    EJA:"NetJets",GTI:"Atlas Air",FDX:"FedEx",UPS:"UPS",ACA:"Air Canada",
+    BAW:"British Airways",AFR:"Air France",DLH:"Lufthansa",KLM:"KLM",
+    VIR:"Virgin Atlantic",UAE:"Emirates",EIN:"Aer Lingus",ENY:"Envoy",PDT:"Piedmont"};
+  return m[p]||"Private / GA";
+}
+// WMO weather codes, granular on the sunny end (0=clear, 1=mostly clear,
+// 2=partly cloudy, 3=overcast). Previous map lumped 0-2 together — sunny
+// days looked cloudy.
+/* ══════════════ SVG ART LIBRARY — zero emoji, everything drawn ══════════════ */
+function wxSVG(kind,cls){
+  cls=cls||"wxi";
+  const sun=`<circle cx="32" cy="30" r="12" fill="#ffd23f"/>`+
+    [0,45,90,135,180,225,270,315].map(a=>`<line x1="32" y1="12" x2="32" y2="6" stroke="#ffd23f" stroke-width="4" stroke-linecap="round" transform="rotate(${a} 32 30)"/>`).join("");
+  const cloud=(f,dy=0)=>`<g transform="translate(0 ${dy})"><circle cx="25" cy="36" r="10" fill="${f}"/><circle cx="37" cy="31" r="12" fill="${f}"/><circle cx="48" cy="37" r="8" fill="${f}"/><rect x="19" y="36" width="35" height="10" rx="5" fill="${f}"/></g>`;
+  const drops=n=>Array.from({length:n},(_,i)=>`<line x1="${27+i*9}" y1="51" x2="${24+i*9}" y2="60" stroke="#4fc3ff" stroke-width="3.5" stroke-linecap="round"/>`).join("");
+  const flakes=n=>Array.from({length:n},(_,i)=>`<circle cx="${27+i*9}" cy="55" r="2.6" fill="#cfe6ff"/>`).join("");
+  const bolt=`<polygon points="35,45 28,58 34,56 30,66 43,50 36,52 41,45" fill="#ffe066"/>`;
+  const fog=[48,54,60].map(y=>`<rect x="15" y="${y}" width="34" height="3.4" rx="1.7" fill="#9fb2cc" opacity=".85"/>`).join("");
+  let g="";
+  if(kind==="sun")g=sun;
+  else if(kind==="partsun")g=`<g transform="translate(-4 -8) scale(.78)">${sun}</g>`+cloud("#b9c8de",2);
+  else if(kind==="cloud")g=cloud("#aebdd4");
+  else if(kind==="fog")g=cloud("#8fa1ba",-6)+fog;
+  else if(kind==="rain")g=cloud("#8fa6c8",-5)+drops(3);
+  else if(kind==="drizzle")g=cloud("#9db2d0",-5)+drops(2);
+  else if(kind==="snow")g=cloud("#b7c6dc",-5)+flakes(3);
+  else if(kind==="storm")g=cloud("#7d90b0",-7)+bolt;
+  else g=cloud("#aebdd4");
+  return `<svg class="${cls}" viewBox="0 0 64 68">${g}</svg>`;
+}
+const wmoArt=c=>c===0?"sun":c<=2?"partsun":c===3?"cloud":c<=48?"fog":
+               c<=57?"drizzle":c<=67?"rain":c<=77?"snow":c<=82?"rain":c<=86?"snow":"storm";
+const wmoEmoji=c=>wxSVG(wmoArt(c));
+
+function moonSVG(frac,cls){
+  const r=46, phase=((frac%1)+1)%1, waxing=phase<=0.5;
+  const t=Math.cos(phase*2*Math.PI), rx=Math.abs(t)*r;
+  const sweepOuter=waxing?1:0, sweepInner=(t>0)?(waxing?0:1):(waxing?1:0);
+  const d=`M50 ${50-r} A${r} ${r} 0 0 ${sweepOuter} 50 ${50+r} A${rx.toFixed(1)} ${r} 0 0 ${sweepInner} 50 ${50-r}Z`;
+  return `<svg class="${cls||""}" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="${r}" fill="#161d2c"/>
+    <path d="${d}" fill="#e8e2cf"/>
+    <g fill="rgba(20,24,36,.16)"><circle cx="38" cy="33" r="6"/><circle cx="61" cy="57" r="9"/>
+    <circle cx="45" cy="70" r="4"/><circle cx="66" cy="30" r="3.5"/><circle cx="30" cy="52" r="5"/></g>
+  </svg>`;
+}
+
+const WM_SVG={
+  news:`<svg viewBox="0 0 64 64"><rect x="5" y="10" width="45" height="46" rx="3" fill="currentColor"/><rect x="52" y="18" width="7" height="38" rx="3" fill="currentColor" opacity=".6"/><g fill="#0a0e15"><rect x="11" y="17" width="20" height="13"/><rect x="35" y="17" width="9" height="13"/><rect x="11" y="35" width="33" height="3"/><rect x="11" y="42" width="33" height="3"/><rect x="11" y="49" width="24" height="3"/></g></svg>`,
+  bank:`<svg viewBox="0 0 64 64"><polygon points="32,3 60,19 4,19" fill="currentColor"/><g fill="currentColor"><rect x="9" y="23" width="7" height="27"/><rect x="22" y="23" width="7" height="27"/><rect x="35" y="23" width="7" height="27"/><rect x="48" y="23" width="7" height="27"/><rect x="5" y="52" width="54" height="8"/></g></svg>`,
+  chart:`<svg viewBox="0 0 64 64"><g fill="currentColor"><rect x="6" y="6" width="4" height="52"/><rect x="6" y="54" width="52" height="4"/></g><polyline points="14,46 26,33 36,39 52,20" stroke="currentColor" stroke-width="5" fill="none"/><polygon points="56,8 59,24 45,15" fill="currentColor"/></svg>`,
+  clipboard:`<svg viewBox="0 0 64 64"><rect x="10" y="7" width="44" height="53" rx="4" fill="currentColor"/><rect x="24" y="2" width="16" height="9" rx="3" fill="currentColor"/><g fill="#0a0e15"><rect x="17" y="20" width="7" height="7"/><rect x="29" y="21" width="18" height="4"/><rect x="17" y="33" width="7" height="7"/><rect x="29" y="34" width="18" height="4"/><rect x="17" y="46" width="7" height="7"/><rect x="29" y="47" width="14" height="4"/></g></svg>`,
+  trophy:`<svg viewBox="0 0 64 64"><path d="M18 5 H46 V21 A14 14 0 0 1 18 21 Z" fill="currentColor"/><path d="M15 9 H7 A11 11 0 0 0 20 26" stroke="currentColor" stroke-width="4" fill="none"/><path d="M49 9 H57 A11 11 0 0 1 44 26" stroke="currentColor" stroke-width="4" fill="none"/><rect x="28" y="33" width="8" height="11" fill="currentColor"/><rect x="20" y="46" width="24" height="6" fill="currentColor"/><rect x="15" y="54" width="34" height="6" fill="currentColor"/></svg>`,
+};
+
+const VEH={
+// Blueprint/HUD style: stroke-only wireframes in currentColor — no fills,
+// no cartoon color. The war-room look owns the whole intro layer.
+planeSide:`<svg class="wire" viewBox="0 0 300 112">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+  <path d="M10 60 Q48 48 106 46 L212 42 Q246 42 266 50 L286 58 Q290 61 284 64 L244 71 Q222 74 182 73 L106 69 Q48 67 10 64 Q5 62 10 60Z"/>
+  <path d="M214 44 L254 12 L267 15 L234 44"/>
+  <path d="M130 52 L78 88 L97 91 L148 55"/>
+  <path d="M140 48 L112 24 L126 23 L157 45"/>
+  <ellipse cx="134" cy="68" rx="12" ry="7"/>
+  <line x1="118" y1="49" x2="232" y2="45" stroke-dasharray="3 6" opacity=".6"/>
+  <line x1="26" y1="61" x2="60" y2="59" opacity=".5"/>
+  </g></svg>`,
+reticle:`<svg class="ret" viewBox="0 0 120 120" preserveAspectRatio="none">
+  <g fill="none" stroke="currentColor" stroke-width="2.5">
+  <path d="M4 30 V8 Q4 4 8 4 H30"/><path d="M90 4 H112 Q116 4 116 8 V30"/>
+  <path d="M116 90 V112 Q116 116 112 116 H90"/><path d="M30 116 H8 Q4 116 4 112 V90"/>
+  <line x1="60" y1="0" x2="60" y2="10"/><line x1="60" y1="110" x2="60" y2="120"/>
+  <line x1="0" y1="60" x2="10" y2="60"/><line x1="110" y1="60" x2="120" y2="60"/>
+  </g></svg>`,
+planeTop:`<svg viewBox="0 0 32 34"><path d="M16 1 C17.6 1 18.6 3 18.6 5 L18.6 12 L31 20.5 L31 24 L18.6 18.6 L18.6 26 L23 30 L23 33 L16 30.6 L9 33 L9 30 L13.4 26 L13.4 18.6 L1 24 L1 20.5 L13.4 12 L13.4 5 C13.4 3 14.4 1 16 1 Z"/></svg>`,
+train:`<svg class="wire" viewBox="0 0 430 100">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+  <path d="M152 70 V36 Q152 23 138 23 L84 23 Q58 24 42 33 Q27 42 24 54 Q22 62 26 67 L28 70 Z"/>
+  <rect x="158" y="22" width="124" height="48" rx="6"/>
+  <rect x="288" y="22" width="124" height="48" rx="6"/>
+  ${Array.from({length:5},(_,i)=>`<rect x="${166+i*24}" y="42" width="15" height="13" rx="2"/>`).join("")}
+  ${Array.from({length:5},(_,i)=>`<rect x="${296+i*24}" y="42" width="15" height="13" rx="2"/>`).join("")}
+  <path d="M48 31 L70 26 L70 40 L44 42 Z"/>
+  <rect x="94" y="30" width="15" height="34" rx="2"/>
+  <line x1="118" y1="31" x2="146" y2="31" opacity=".6"/>
+  <line x1="118" y1="36" x2="146" y2="36" opacity=".6"/>
+  <line x1="118" y1="41" x2="146" y2="41" opacity=".6"/>
+  <line x1="28" y1="58" x2="152" y2="55" opacity=".55"/>
+  <line x1="158" y1="33" x2="282" y2="33" opacity=".55"/>
+  <line x1="288" y1="33" x2="412" y2="33" opacity=".55"/>
+  <line x1="10" y1="78" x2="424" y2="78"/>
+  ${[50,92,196,244,326,374].map(x=>`<g class="wh" style="transform-origin:${x}px 86px"><circle cx="${x}" cy="86" r="9"/><line x1="${x}" y1="77" x2="${x}" y2="95"/><line x1="${x-9}" y1="86" x2="${x+9}" y2="86"/></g>`).join("")}
+  </g></svg>`,
+jeep:`<svg class="wire" viewBox="0 0 300 130">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+  <path d="M20 92 V62 Q20 55 28 53 L60 49 L80 29 Q84 23 94 23 L206 23 Q214 23 218 29 L234 49 L274 55 Q284 57 284 65 V92Z"/>
+  <rect x="86" y="27" width="124" height="21" rx="3"/>
+  <line x1="130" y1="27" x2="130" y2="48"/><line x1="170" y1="27" x2="170" y2="48"/>
+  <rect x="32" y="60" width="240" height="21" rx="3"/>
+  ${[46,74,102,130,158,186,214,242].map(x=>`<line x1="${x}" y1="79" x2="${x+14}" y2="62" opacity=".55"/>`).join("")}
+  <line x1="98" y1="15" x2="208" y2="15"/>
+  <line x1="104" y1="15" x2="104" y2="23"/><line x1="200" y1="15" x2="200" y2="23"/>
+  <g class="wh" style="transform-origin:86px 96px"><circle cx="86" cy="96" r="16"/><line x1="86" y1="80" x2="86" y2="112"/><line x1="70" y1="96" x2="102" y2="96"/></g>
+  <g class="wh" style="transform-origin:222px 96px"><circle cx="222" cy="96" r="16"/><line x1="222" y1="80" x2="222" y2="112"/><line x1="206" y1="96" x2="238" y2="96"/></g>
+  </g></svg>`,
+tornado:`<svg class="wire" viewBox="0 0 200 165">
+  ${[[100,26,76,15],[100,50,59,13],[98,72,44,11],[94,92,31,9],[90,110,20,7],[87,126,11,5],[85,141,5,3]].map((e,i)=>`<ellipse class="tw" style="animation-delay:${(-i*.3).toFixed(1)}s" cx="${e[0]}" cy="${e[1]}" rx="${e[2]}" ry="${e[3]}" fill="none" stroke="currentColor" stroke-width="${(4-i*.4).toFixed(1)}" opacity="${(.85-i*.09).toFixed(2)}"/>`).join("")}
+</svg>`,
+candles:`<svg viewBox="0 0 300 120">${Array.from({length:11},(_,i)=>{
+  const up=(i*7)%3!==0, h=18+((i*29)%52), y=104-h;
+  const c=up?"#39d353":"#ff5a5a";
+  return `<g class="cd" style="animation-delay:${(i*.12).toFixed(2)}s"><line x1="${16+i*26}" y1="${y-8}" x2="${16+i*26}" y2="${y+h+8}" stroke="${c}" stroke-width="2"/><rect x="${9+i*26}" y="${y}" width="14" height="${h}" rx="2" fill="${c}"/></g>`;}).join("")}</svg>`,
+};
+
+/* ══════════════ FLIGHT RADAR ══════════════ */
+async function fetchFlights(){
+  const b=CFG.flightBox;
+  const u=`https://opensky-network.org/api/states/all?lamin=${b.lamin}&lomin=${b.lomin}&lamax=${b.lamax}&lomax=${b.lomax}`;
+  let j=null;
+  // proxy FIRST — OpenSky doesn't send CORS headers, direct only works headless
+  if(PROXY_OK){ try{ j=await jget(viaProxy(u)); }catch(e){} }
+  if(!j){ try{ j=await jget(u); }catch(e){} }
+  if(!j||!j.states)return;
+  S.flights=j.states
+    .filter(s=>s[5]!=null&&s[6]!=null&&!s[8])
+    .map(s=>({hex:s[0],cs:(s[1]||"").trim()||s[0].toUpperCase(),
+      lon:s[5],lat:s[6],
+      altFt:s[7]?Math.round(s[7]*3.281):null,
+      kt:s[9]?Math.round(s[9]*1.944):null,
+      hdg:s[10]||0,
+      dist:hav(CFG.office.lat,CFG.office.lon,s[6],s[5])}))
+    .sort((a,b2)=>a.dist-b2.dist)
+    .slice(0,8);
+  S.flightsAt=Date.now();   // freshness stamp — radar hides when stale
+  // Photo of an actual overhead airframe (matched by transponder hex) via
+  // Planespotters. Small GA planes often have no photo, so walk the three
+  // nearest and feature the first one that does (usually an airliner).
+  for(let i=0;i<Math.min(3,S.flights.length);i++){
+    const p=await getPlanePhoto(S.flights[i].hex);
+    if(p){
+      S.flights[i].photo=p;
+      if(i>0) S.flights.unshift(S.flights.splice(i,1)[0]);
+      break;
+    }
+  }
+  buildDataTicker();
+}
+const planePhotoCache=new Map();
+async function getPlanePhoto(hex){
+  if(planePhotoCache.has(hex))return planePhotoCache.get(hex);
+  let p=null;
+  const u=`https://api.planespotters.net/pub/photos/hex/${hex}`;
+  try{
+    let j=null;
+    // Proxy FIRST — planespotters 403s browser UAs from this network; the
+    // proxy sends the app-identifying UA their API asks for.
+    try{ j=PROXY_OK?await jget(viaProxy(u)):await jget(u); }
+    catch(e){ j=await jget(u); }
+    const ph=j&&j.photos&&j.photos[0];
+    if(ph&&(ph.thumbnail_large||ph.thumbnail))
+      p={src:(ph.thumbnail_large||ph.thumbnail).src, by:ph.photographer||""};
+  }catch(e){}
+  planePhotoCache.set(hex,p);
+  if(planePhotoCache.size>40){planePhotoCache.delete(planePhotoCache.keys().next().value);}
+  return p;
+}
+const flightsFresh=()=>S.flights.length&&S.flightsAt&&(Date.now()-S.flightsAt<25*60*1000);
+function radarHTML(){
+  const b=CFG.flightBox;
+  const planes=S.flights.map((f,i)=>{
+    const x=((f.lon-b.lomin)/(b.lomax-b.lomin))*100;
+    const y=(1-(f.lat-b.lamin)/(b.lamax-b.lamin))*100;
+    return `<span class="plane ${i===0?"near":""}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--hdg:${Math.round(f.hdg)}deg;--bi:${i}">${VEH.planeTop}</span>`;
+  }).join("");
+  const hx=((CFG.office.lon-b.lomin)/(b.lomax-b.lomin))*100;
+  const hy=(1-(CFG.office.lat-b.lamin)/(b.lamax-b.lamin))*100;
+  const n=S.flights[0];
+  const info=n?`
+    <div class="fl-info">
+      <div class="cs">${esc(n.cs)}</div>
+      <div class="al">${airlineName(n.cs)}</div>
+      <div class="st">
+        ALT <b>${n.altFt?n.altFt.toLocaleString()+" FT":"—"}</b> ·
+        SPD <b>${n.kt?n.kt+" KT":"—"}</b><br>
+        DIST <b>${n.dist.toFixed(0)} MI</b> FROM 100 MASON · ${S.flights.length} OVERHEAD
+      </div>
+      ${n.photo?`<img class="fl-photo" src="${n.photo.src}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='none'">
+        <div class="fl-credit">PHOTO: ${esc(n.photo.by).toUpperCase()} · PLANESPOTTERS.NET</div>`:""}
+    </div>`:"";
+  return `<div class="fl-wrap intro-stage">
+    <div class="intro intro-flights"><span class="ip">${VEH.planeSide}${VEH.reticle}
+      <b class="tlm">${n?`CONTACT ${esc(n.cs)} · ${n.altFt?n.altFt.toLocaleString()+" FT":"ALT —"} · TRACKING`:"SCANNING SECTOR · NO CONTACTS"}</b></span></div>
+    <div class="radar">
+      <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
+      <div class="cross h"></div><div class="cross v"></div>
+      <div class="sweep"></div>
+      <span class="home" style="left:${hx.toFixed(1)}%;top:${hy.toFixed(1)}%"></span>
+      ${planes}
+    </div>${info}</div>`;
+}
+
+/* ══════════════ LEADERSHIP QUOTES ══════════════
+   Rotates every 5 minutes — a different one each pass of the loop. */
+const QUOTES=[
+  {q:"Leadership is the art of getting someone else to do something you want done because he wants to do it.",a:"Dwight D. Eisenhower"},
+  {q:"The price of greatness is responsibility.",a:"Winston Churchill"},
+  {q:"Do what you can, with what you have, where you are.",a:"Theodore Roosevelt"},
+  {q:"It is not the critic who counts. The credit belongs to the man who is actually in the arena.",a:"Theodore Roosevelt"},
+  {q:"A good plan violently executed now is better than a perfect plan executed next week.",a:"George S. Patton"},
+  {q:"Accept the challenges so that you can feel the exhilaration of victory.",a:"George S. Patton"},
+  {q:"The best way to predict the future is to create it.",a:"Peter Drucker"},
+  {q:"Management is doing things right; leadership is doing the right things.",a:"Peter Drucker"},
+  {q:"Winning is not a sometime thing; it's an all the time thing. You don't do things right once in a while — you do them right all the time.",a:"Vince Lombardi"},
+  {q:"The difference between a successful person and others is not a lack of strength, not a lack of knowledge, but rather a lack of will.",a:"Vince Lombardi"},
+  {q:"Leaders aren't born, they are made. And they are made just like anything else — through hard work.",a:"Vince Lombardi"},
+  {q:"You miss 100% of the shots you don't take.",a:"Wayne Gretzky"},
+  {q:"Waste no more time arguing about what a good man should be. Be one.",a:"Marcus Aurelius"},
+  {q:"The impediment to action advances action. What stands in the way becomes the way.",a:"Marcus Aurelius"},
+  {q:"Luck is what happens when preparation meets opportunity.",a:"Seneca"},
+  {q:"First say to yourself what you would be; and then do what you have to do.",a:"Epictetus"},
+  {q:"Well done is better than well said.",a:"Benjamin Franklin"},
+  {q:"Energy and persistence conquer all things.",a:"Benjamin Franklin"},
+  {q:"Vision without execution is hallucination.",a:"Thomas Edison"},
+  {q:"Opportunity is missed by most people because it is dressed in overalls and looks like work.",a:"Thomas Edison"},
+  {q:"Whether you think you can, or you think you can't — you're right.",a:"Henry Ford"},
+  {q:"Don't find fault, find a remedy.",a:"Henry Ford"},
+  {q:"Coming together is a beginning; keeping together is progress; working together is success.",a:"Henry Ford"},
+  {q:"The buck stops here.",a:"Harry S. Truman"},
+  {q:"It is amazing what you can accomplish if you do not care who gets the credit.",a:"Harry S. Truman"},
+  {q:"Leadership is solving problems.",a:"Colin Powell"},
+  {q:"There are no secrets to success. It is the result of preparation, hard work, and learning from failure.",a:"Colin Powell"},
+  {q:"It always seems impossible until it's done.",a:"Nelson Mandela"},
+  {q:"Only the paranoid survive.",a:"Andy Grove"},
+  {q:"Someone's sitting in the shade today because someone planted a tree a long time ago.",a:"Warren Buffett"},
+  {q:"It takes 20 years to build a reputation and five minutes to ruin it. If you think about that, you'll do things differently.",a:"Warren Buffett"},
+  {q:"The big money is not in the buying and selling, but in the waiting.",a:"Charlie Munger"},
+  {q:"Amateurs sit and wait for inspiration. The rest of us just get up and go to work.",a:"Stephen King"},
+  {q:"The way to get started is to quit talking and begin doing.",a:"Walt Disney"},
+  {q:"Victory awaits him who has everything in order — luck, people call it.",a:"Roald Amundsen"},
+  {q:"Plans are worthless, but planning is everything.",a:"Dwight D. Eisenhower"},
+  {q:"He who has a why to live for can bear almost any how.",a:"Friedrich Nietzsche"},
+  {q:"Success is not final, failure is not fatal: it is the courage to continue that counts.",a:"Winston Churchill"},
+  {q:"Hard work spotlights the character of people: some turn up their sleeves, some turn up their noses, and some don't turn up at all.",a:"Sam Ewing"},
+  {q:"A leader is one who knows the way, goes the way, and shows the way.",a:"John C. Maxwell"},
+];
+
+/* ══════════════ THIS DAY IN MARKET HISTORY ══════════════
+   Keyed MM-DD. If today has no entry, the nearest one within a week shows
+   with its real date. */
+const MKT_HIST={
+  "01-01":{y:1999,t:"The euro launches as the official currency of 11 European nations — the largest monetary changeover in history."},
+  "01-08":{y:1835,t:"The United States national debt hits zero for the only time in its history, under President Andrew Jackson."},
+  "01-29":{y:1993,t:"The first U.S. exchange-traded fund — the SPDR S&P 500 (SPY) — begins trading. ETFs now hold trillions."},
+  "02-05":{y:2018,t:"'Volmageddon' — a spike in the VIX wipes out short-volatility funds; the Dow swings more than 1,500 points intraday."},
+  "02-08":{y:1971,t:"The NASDAQ, the world's first electronic stock market, opens for its first day of trading."},
+  "02-11":{y:2016,t:"Stocks and oil bottom together — S&P 1,810 and crude under $27 — before one of the strongest rallies of the decade."},
+  "02-19":{y:2020,t:"The S&P 500 closes at a record high — the final peak before the COVID crash erased 34% in 33 days."},
+  "03-06":{y:2009,t:"The S&P 500 touches its financial-crisis intraday low: 666. The 'devil's low' marks the start of an 11-year bull market."},
+  "03-10":{y:2000,t:"The NASDAQ peaks at 5,048 at the height of the dot-com bubble. It would fall 78% and take 15 years to recover."},
+  "03-12":{y:2020,t:"COVID panic hands stocks their worst day since 1987 — the Dow plunges 10% despite emergency Fed action."},
+  "03-16":{y:2008,t:"Bear Stearns, an 85-year-old investment bank, is sold to JPMorgan for $2 a share — down from $170 a year earlier."},
+  "03-23":{y:2020,t:"The COVID bear market bottoms as the Fed announces unlimited QE. The S&P more than doubles over the next two years."},
+  "03-24":{y:2000,t:"The S&P 500 hits its dot-com era peak of 1,527 — a level it would not see again for seven years."},
+  "04-01":{y:1976,t:"Apple Computer is founded in a garage by Steve Jobs and Steve Wozniak. It becomes the first $3 trillion company."},
+  "04-20":{y:2020,t:"Oil goes NEGATIVE for the first time in history — May WTI futures settle at −$37.63 as storage runs out."},
+  "05-06":{y:2010,t:"The Flash Crash: the Dow drops nearly 1,000 points in minutes as algorithmic trading cascades, then mostly recovers."},
+  "05-17":{y:1792,t:"Twenty-four brokers sign the Buttonwood Agreement under a tree on Wall Street — founding what becomes the NYSE."},
+  "05-18":{y:2012,t:"Facebook's $16 billion IPO — the largest tech offering in history at the time — is marred by NASDAQ glitches."},
+  "05-28":{y:1962,t:"The 'Kennedy Slide' — the Dow falls 5.7% in a day during the flash crash of 1962, the worst drop since 1929."},
+  "06-01":{y:2009,t:"General Motors — once the world's largest company — files for bankruptcy. It had been a Dow member for 83 years."},
+  "06-29":{y:2007,t:"The first iPhone goes on sale. Apple stock is up more than 4,000% since."},
+  "07-02":{y:1962,t:"Sam Walton opens the first Walmart in Rogers, Arkansas. It becomes the world's largest retailer."},
+  "07-08":{y:1932,t:"The Dow bottoms at 41.22 — down 89% from its 1929 peak. The Great Depression low is never revisited."},
+  "08-09":{y:2007,t:"BNP Paribas freezes three funds over subprime exposure — the moment many mark as the start of the financial crisis."},
+  "08-12":{y:1982,t:"The great 1980s bull market begins with the Dow at 777. It would gain 1,400% over 18 years."},
+  "08-15":{y:1971,t:"President Nixon closes the gold window, ending Bretton Woods and the dollar's convertibility to gold."},
+  "08-24":{y:2015,t:"China's 'Black Monday' — the Dow opens down 1,089 points, its largest intraday point drop to that date."},
+  "09-15":{y:2008,t:"Lehman Brothers files the largest bankruptcy in U.S. history ($639B). The global financial crisis goes critical."},
+  "09-16":{y:1992,t:"Black Wednesday: George Soros 'breaks the Bank of England,' making $1B shorting the pound out of the ERM."},
+  "09-17":{y:2001,t:"Markets reopen after 9/11. The Dow falls 684 points — at the time, its biggest one-day point loss ever."},
+  "10-13":{y:2008,t:"The Dow rockets up 936 points — its biggest point gain ever at the time — on global bank rescue plans."},
+  "10-19":{y:1987,t:"Black Monday: the Dow crashes 22.6% in a single session — still the worst one-day percentage loss in history."},
+  "10-24":{y:1929,t:"Black Thursday: panic selling hits the NYSE; bankers pool funds to prop the tape. The Great Crash begins."},
+  "10-29":{y:1929,t:"Black Tuesday: the crash of 1929 climaxes with 16 million shares traded. The Great Depression follows."},
+  "11-13":{y:1929,t:"The initial crash of 1929 finds its bottom — the Dow at 198, down 48% in two months."},
+  "12-01":{y:2008,t:"The recession is officially declared (it began a year earlier). The Dow drops 680 points on the news."},
+  "12-05":{y:1996,t:"Alan Greenspan utters 'irrational exuberance' — a two-word warning that briefly rattles world markets."},
+  "12-23":{y:1913,t:"President Wilson signs the Federal Reserve Act, creating the central bank of the United States."},
+  "12-26":{y:2018,t:"The Dow surges 1,086 points — its largest single-day point gain in history — after the Christmas Eve rout."},
+};
+function todaysMktHist(){
+  const now=new Date();
+  const mos=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+  const key=String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+  if(MKT_HIST[key]){
+    const e=MKT_HIST[key];
+    return {label:mos[now.getMonth()]+" "+now.getDate()+", "+e.y, ...e};
+  }
+  // No entry for today: the table is sparse, and the old nearest-date search
+  // pinned the card to the same fact for days at a time. Rotate through the
+  // whole table by day-of-year instead so the card changes every day.
+  const keys=Object.keys(MKT_HIST).sort();
+  const doy=Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
+  const k=keys[doy%keys.length];
+  const e=MKT_HIST[k];
+  const [mm,dd]=k.split("-").map(Number);
+  return {label:"FROM "+mos[mm-1]+" "+dd+", "+e.y, ...e};
+}
+
+/* ══════════════ MOON PHASE (computed locally, same math as the LED panel) ══ */
+function moonPhaseFrac(){
+  const synodic=29.53058867;
+  const refNewMoon=Date.UTC(2000,0,6,18,14)/86400000;   // known new moon
+  const days=Date.now()/86400000-refNewMoon;
+  return ((days%synodic)+synodic)%synodic/synodic;      // 0=new, .5=full
+}
+const MOON_NAMES=["New Moon","Waxing Crescent","First Quarter","Waxing Gibbous",
+                  "Full Moon","Waning Gibbous","Last Quarter","Waning Crescent"];
+function moonPageHTML(){
+  const p=moonPhaseFrac();
+  const idx=Math.round(p*8)%8;
+  const illum=Math.round((1-Math.cos(2*Math.PI*p))/2*100);
+  const dFull=(((0.5-p)+1)%1)*29.53, dNew=((1-p)%1)*29.53;
+  const strip=MOON_NAMES.map((_,i)=>
+    `<span class="${i===idx?"cur":""}">${moonSVG(i/8)}</span>`).join("");
+  return `<div class="mn-wrap">
+    <div class="mn-big">${moonSVG(p)}</div>
+    <div class="mn-info">
+      <div class="name">${MOON_NAMES[idx]}</div>
+      <div class="illum">${illum}% ILLUMINATED</div>
+      <div class="next">FULL MOON IN ${Math.round(dFull)}d<br>NEW MOON IN ${Math.round(dNew)}d</div>
+      <div class="mn-strip">${strip}</div>
+    </div>
+  </div>`;
+}
+
+/* ══════════════ WHOOP (via Apps Script relay) ══════════════ */
+async function fetchWhoop(){
+  const u=CFG.whoopRelay; if(!u)return;
+  let j=null;
+  try{ j=await jget(u); }
+  catch(e){ if(PROXY_OK){ try{ j=await jget(viaProxy(u)); }catch(e2){} } }
+  if(!j)return;
+  // Relay returns all zeros when its WHOOP tokens are missing/expired
+  const sum=(j.recovery_score||0)+(j.strain||0)+(j.sleep_score||0);
+  S.whoop=sum>0?j:null;
+}
+
+/* ══════════════ LIS NAUTICAL CHART ══════════════
+   Stylized Long Island Sound — same geography and buoy set as the LED
+   panel's chart, drawn as SVG. Each buoy blinks at its real NOAA flash
+   period (drives animation-duration). Live waves/water from NDBC 44025. */
+// Real coastline: US Census 500k cartographic boundaries, projected to this
+// 640x320 box (lon -74.08..-71.78, lat 40.72..41.46, equirectangular, bbox-
+// clamped) via tools in the session scratchpad. CT + NY (Westchester, Long
+// Island, Fishers/Shelter/Plum islands) + RI (Watch Hill corner).
+const LIS_COAST=[
+"M594.5,75 L599.2,73.5 L596.8,77.6 L593.7,79.4 L589.2,81.7 L584.6,84.3 L580.3,88 L578.1,89.6 L568.5,90.9 L569.1,88.5 L570.6,85.2 L572.3,81.7 L573.5,80.4 L576.9,80.7 L581.3,77.3 L584.3,77.7 L591.9,75.6 L594.5,75 Z",
+"M542,153.8 L543.1,152.2 L543.5,149.1 L555.4,155 L556.2,158.3 L554.6,173.7 L552.1,175.6 L551.8,166.1 L550.1,161.5 L549.2,160.5 L545.2,158.6 L540,158.9 L539.3,158.1 L539,156.6 L539.6,155.3 L542,153.8 Z",
+"M117.6,205.3 L118,207.7 L116.9,212.6 L116.3,213.5 L111.8,215 L110.4,221 L109.5,222.6 L106.3,225 L99.7,228.3 L96.9,231.4 L89.9,236.7 L83.1,248.5 L82.1,251.4 L81.9,255.5 L81,260.1 L81.2,262 L82.2,263 L82.9,264.9 L82.9,266.1 L82.9,267.1 L83.1,268.6 L82.4,269.5 L81.2,267.2 L80.4,265.3 L80.8,263.2 L80.1,261.3 L78.7,262.8 L78,264.6 L76,264 L74.3,265.2 L73.6,270.2 L73.7,272 L74.6,274.4 L76.7,277.4 L78.7,278.7 L83.1,287.6 L84.6,287.4 L86.7,285.1 L90.7,276.3 L90.6,273.8 L97.9,262.5 L98.3,260.8 L97.2,257.1 L101.9,255.1 L112.5,260.8 L118,257.8 L118.4,251.6 L122.1,245.4 L124.2,242.9 L126.1,242.4 L128.7,243.1 L133,241 L134.9,239 L141.9,235.5 L143,235.3 L148,238.4 L156,236 L157.2,236.6 L161.4,234.3 L162.3,232 L163.7,224 L165.5,222.1 L167.4,223.9 L171.5,225.9 L179,227.1 L180.9,229.3 L181.2,232.9 L187.5,233.4 L188.4,231.3 L188.3,223.9 L189,218.8 L191.2,218.2 L196.3,225.9 L198.7,228.5 L202.4,230.6 L204.4,231.2 L208.3,229.4 L218.4,231.6 L236.7,239.9 L259.1,229.7 L259.8,227 L260.3,218 L257.5,215.5 L256.1,212.6 L262.3,213.3 L267.6,208.4 L269.8,211.1 L277.8,210.6 L288.4,215.3 L289.3,214.3 L301.7,213.4 L313,213.6 L324.5,215.1 L331.6,214.9 L348.9,212 L363.4,213.9 L367.3,209.6 L380,205.1 L387,203.3 L393.7,204.3 L402,203 L415.9,200 L421.5,194.8 L422.7,192.2 L425.8,190.3 L433.7,182.6 L446,176.3 L450.6,169.9 L454.9,161.7 L462.5,160.9 L468.3,157.3 L479.7,141.1 L486,139.2 L489.1,138.1 L497.8,131.5 L501.2,130.3 L502.8,131.9 L504.2,132.3 L510.5,129.2 L512.5,130 L512.6,131.3 L508.2,139.6 L505,143.4 L495.2,150.4 L495.3,141.8 L493.5,139.3 L491.8,139 L490.3,139.6 L487.9,141.8 L485.5,146.9 L485.5,152.7 L490.5,160.6 L495.9,163.9 L500.8,164.2 L501.8,165.7 L500,169.6 L502.6,176.6 L506.3,180.7 L511.7,179.6 L515,179.7 L518.3,181.4 L522.6,185 L525.8,184.8 L527.8,183.5 L528.8,182.3 L530.1,179 L533.5,175.9 L536,176.5 L540.6,181.8 L541.2,185.4 L540.5,188.6 L546.4,199 L548.4,201.5 L550.4,202.6 L552.2,202.7 L555.7,200.5 L556.5,197.4 L556.7,196.1 L557.6,195 L563.4,189.3 L565.6,189.2 L568.8,189.9 L574.6,186.7 L579,181.8 L581.2,177.8 L584,177.8 L584.3,179.7 L588,178.3 L589.6,175.4 L589.8,173 L589.5,171.2 L590,168.1 L596,165.4 L601.2,164.1 L606.8,164 L607.9,165.5 L609.5,166.2 L615.1,166.5 L616.5,165.7 L618.4,167.1 L618.8,168.4 L613.9,176.3 L605.6,181.5 L596.7,184.1 L570.6,199 L546.9,211 L468.6,256.6 L448,266.9 L419.2,279.7 L371.4,299.6 L369.2,301.2 L368.1,300.8 L365,302 L338.6,314.4 L321.9,320 L15.4,320 L16.4,316.8 L18.4,304.2 L19.7,301.1 L31.1,276.5 L32.5,273.8 L35.1,264.6 L36.7,260.2 L39.5,253.1 L40.8,249.9 L42,246.7 L44.6,236.3 L45,234.6 L45.2,233.7 L45.8,231.4 L48.1,219.9 L51.1,206.8 L51.8,200.1 L49.3,200.1 L48.1,199.6 L46.8,198.4 L10.8,173.4 L0,163.5 L0,0.8 L0,0 L151.9,0 L151.4,1.2 L151.4,2.1 L151.4,3 L151.1,8.2 L151,10.4 L150.9,11.3 L149.9,23.4 L149.3,36.1 L148.9,40.5 L147.8,57.8 L147.6,62.3 L147.8,65.9 L147.2,71.2 L156.3,87.9 L166.2,106.9 L158.8,112.1 L157.3,113.1 L143.3,123.2 L124.6,136.3 L122.5,137.7 L98,155.4 L99.5,158.4 L101,161 L107.3,173.3 L109.3,177 L111.3,180.8 L114,185.9 L116.1,190.1 L118.2,193.4 L118.1,195.6 L117,199.1 L117.2,201.7 L117,204.1 L117.6,205.3 Z",
+"M87,248.1 L87.1,249.3 L87.3,250.3 L86,251.1 L84.8,249.9 L84.8,249 L85.6,247.6 L86.7,247.5 Z",
+"M85.3,259.7 L87.3,260.6 L87.6,262 L87.4,266 L86.4,266.1 L85.4,264.6 L85.2,261.7 L85.3,259.7 Z",
+"M523.5,127.6 L519.9,124.1 L519.5,121.9 L526.2,117.2 L529.3,117.9 L531.5,117.3 L533.7,115.7 L534,117.3 L528.8,119.8 L526.8,121.2 L523.5,127.6 Z",
+"M640,0 L640,2.5 L640,57.1 L638.3,58.1 L625,62.4 L618.5,66.5 L617,65 L617.2,62 L617.6,60.4 L623.6,54.5 L626.2,49.9 L624.4,45.9 L623.9,41.7 L625.6,38.5 L625.1,32.6 L622.7,28 L622.3,23.4 L622.6,21.7 L623.4,20.7 L629.3,17.5 L635.1,18.7 L637.4,0 L640,0 Z",
+"M617.9,59.5 L615.4,55.8 L610.4,53.4 L602,55.3 L600.5,54.3 L596.5,52.8 L593.9,52.8 L590.8,56.3 L586.9,58.6 L584.5,56.2 L582.1,60.3 L578.7,60.9 L577.4,66.3 L575.8,66.1 L572.7,61.9 L555.3,60.7 L552.5,63.1 L551,66.2 L547.7,69.6 L541.4,69.4 L533.8,64.8 L530.4,61.6 L529.4,59.5 L527.5,58.8 L525.6,59.2 L522.7,62.4 L522.3,63.5 L522,69.6 L522.7,74.2 L521.7,75.6 L520.4,75.2 L519.5,72.9 L516.1,69.6 L513.2,69 L509.7,69.4 L508.7,69.8 L509.1,71.6 L508.8,73.5 L506,76.6 L490.4,78.8 L487.6,78.5 L485.9,76.6 L481.8,78.9 L481.9,82.3 L471.2,85.7 L467.8,78.6 L465.8,78.5 L453,78.3 L447.3,82.1 L443.6,81.8 L439.8,83.9 L437.8,86.4 L434.5,85.9 L433.7,84.1 L431.5,84.6 L430.4,85.3 L429.4,88.1 L426.5,90.6 L419.9,83 L416.5,81.4 L412.4,82.7 L407,81.3 L400.3,83.5 L396.8,83.9 L394.3,82.5 L391.7,83.5 L388.2,87.5 L388,90.2 L386.7,92.2 L385.5,93 L381.1,93.2 L380.2,91.2 L380.5,89 L377.8,86.9 L374.9,88.8 L368.9,83.5 L368,83.5 L360,84.4 L351,89.8 L348.7,87.9 L342.9,87.9 L341.1,91.8 L339.1,92.8 L333.5,94 L329.6,93.5 L327.1,92 L327.5,89.6 L329.8,88.1 L330.1,86.5 L326.1,76.6 L323.7,77 L322.8,77.8 L322.5,82.6 L318.4,87.1 L311.1,90.1 L304.3,97.9 L301.1,102.6 L298.4,108 L296.4,110.6 L294.9,110.7 L294.8,109.7 L286.4,108 L284,109.5 L278.4,115 L271.2,124.5 L270.5,126 L269.8,129.9 L269.9,131 L270.4,132.4 L269.6,133.7 L264.3,135.4 L253.2,129.5 L253,127.6 L251.1,126.8 L244.1,130.6 L237,137.3 L235.1,136.7 L231.5,144.3 L227.5,148.1 L220.7,143.6 L218.1,144.6 L213.7,148.6 L208.5,151.4 L196.9,153.9 L191.4,161 L189.2,161.6 L185.4,167.2 L179.5,174.4 L175.2,174.2 L170.2,176.7 L167.7,183.4 L163.2,178.1 L156.7,182.2 L156.7,186.2 L155.1,190.6 L153.4,191.8 L152.7,189.4 L153,186.5 L152.3,185.2 L147.1,188.4 L144.1,191.7 L142.6,194.2 L141.9,198.2 L138,198.5 L137.7,194.4 L134.8,192 L132.5,192.4 L121.5,198 L119.3,201 L117.6,205.3 L117,204.1 L117.2,201.7 L117,199.1 L118.1,195.6 L118.4,193.9 L116.1,190.1 L114,185.9 L111.3,180.8 L109.3,177 L107.3,173.3 L101,161 L99.5,158.4 L98,155.4 L122.5,137.7 L124.6,136.3 L143.3,123.2 L157.3,113.1 L158.8,112.1 L166.2,106.9 L156.3,87.9 L147.2,71.2 L147.8,65.9 L147.6,62.3 L147.8,57.8 L148.9,40.5 L149.3,36.1 L149.9,23.4 L150.9,11.3 L151,10.4 L151.1,8.2 L151.4,3.7 L151.4,2.1 L151.4,1.2 L151.8,0 L638.1,0 L635.1,18.7 L629.3,17.5 L623.4,20.7 L622.6,21.7 L622.3,23.4 L622.7,28 L625.1,32.6 L625.6,38.5 L623.9,41.7 L624.4,45.9 L626.2,49.9 L623.6,54.5 L617.6,60.4 L617.9,59.5 Z",
+"M183,178.4 L188.2,171.8 L198.2,160.8 L202.6,160.8 L193.2,173.3 L183,178.4 Z",
+];
+const LIS_BUOYS=[
+  // true station positions projected into the same chart space
+  {x:203,y:199,c:"#f2f4f8",per:5.0,n:"44025"},   // west-central sound, Fl W
+  {x:562,y:66, c:"#39d353",per:6.0,n:"NLON"},    // New London approach, Fl G
+  {x:250,y:140,c:"#ff4757",per:4.0,n:"BPT"},     // Bridgeport approach, Fl R
+  {x:607,y:177,c:"#f2f4f8",per:5.0,n:"MTK"},     // Montauk / Block Is Sound
+  {x:95, y:248,c:"#ff4757",per:4.0,n:"ExRk"},    // Execution Rocks
+  {x:273,y:173,c:"#39d353",per:5.0,n:"STRAT",dy:-16},   // Stratford Shoal
+  {x:481,y:95, c:"#f2f4f8",per:5.0,n:"SAYBK"},   // Saybrook approach
+  {x:398,y:108,c:"#ff4757",per:3.0,n:"FAULK"},   // Faulkner Is
+];
+function lisChartHTML(){
+  const land="#0e2416", landEdge="#1e4a2e", sand="#3a5a40";
+  const buoys=LIS_BUOYS.map(b=>`
+    <g class="buoy" style="--per:${b.per}s">
+      <circle cx="${b.x}" cy="${b.y}" r="11" fill="${b.c}" opacity=".18"/>
+      <circle cx="${b.x}" cy="${b.y}" r="5.5" fill="${b.c}"/>
+    </g>
+    <text x="${b.x}" y="${b.y+(b.dy||24)}" font-size="12" text-anchor="middle">${b.n}</text>`).join("");
+  const info=`
+    <div class="lis-info">
+      <div class="row"><div class="l">WAVES</div>
+        <div class="v">${S.buoy&&S.buoy.waveFt?S.buoy.waveFt+" FT":"—"}</div></div>
+      <div class="row"><div class="l">WATER</div>
+        <div class="v">${S.buoy&&S.buoy.waterF?S.buoy.waterF+"°F":"—"}</div></div>
+      <div class="row"><div class="l">NEXT TIDE · STAMFORD</div>
+        <div class="v gold">${S.tides||"—"}</div></div>
+    </div>`;
+  return `<div class="lis-wrap">
+    <div class="lis-map"><svg viewBox="0 0 640 320">
+      <defs><linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0a1826"/><stop offset=".5" stop-color="#0d2033"/>
+        <stop offset="1" stop-color="#0a1826"/></linearGradient></defs>
+      <rect x="0" y="0" width="640" height="320" fill="url(#wgrad)"/>
+      <!-- graticule at true half-degree meridians / quarter-degree parallels -->
+      <g stroke="#16344e" stroke-width="1" stroke-dasharray="2 8" opacity=".6">
+        <line x1="161" y1="0" x2="161" y2="320"/><line x1="300" y1="0" x2="300" y2="320"/>
+        <line x1="440" y1="0" x2="440" y2="320"/><line x1="579" y1="0" x2="579" y2="320"/>
+        <line x1="0" y1="199" x2="640" y2="199"/><line x1="0" y1="91" x2="640" y2="91"/>
+      </g>
+      <g font-size="10" fill="#2c4a66">
+        <text x="164" y="14">73°30'W</text><text x="303" y="14">73°00'W</text>
+        <text x="443" y="14">72°30'W</text><text x="582" y="14">72°00'W</text>
+        <text x="4" y="196">41°00'N</text><text x="4" y="88">41°15'N</text>
+      </g>
+      <!-- depth contours along the sound's real WSW-ENE axis -->
+      <path d="M90,265 Q250,225 400,165 T630,80" fill="none" stroke="#12314e"
+            stroke-width="2" stroke-dasharray="6 8"/>
+      <path d="M110,240 Q260,205 400,150 T625,68" fill="none" stroke="#102a44"
+            stroke-width="2" stroke-dasharray="4 10"/>
+      <path d="M130,288 Q280,248 420,185 T636,98" fill="none" stroke="#102a44"
+            stroke-width="1.5" stroke-dasharray="3 9" opacity=".7"/>
+      <!-- depth soundings (feet), scattered mid-channel -->
+      <g font-size="10" fill="#2c4a66">
+        <text x="106" y="232">48</text><text x="140" y="220">65</text>
+        <text x="180" y="208">72</text><text x="228" y="192">95</text>
+        <text x="322" y="214">118</text><text x="356" y="186">142</text>
+        <text x="382" y="140">165</text><text x="436" y="124">188</text>
+        <text x="492" y="110">215</text><text x="548" y="126">190</text>
+        <text x="596" y="142">160</text><text x="238" y="152">58</text>
+      </g>
+      <!-- traffic separation lanes down the channel -->
+      <g stroke="#8a5a9a" stroke-width="1.5" stroke-dasharray="10 8" opacity=".4">
+        <line x1="90" y1="248" x2="600" y2="98"/>
+        <line x1="98" y1="259" x2="608" y2="109"/>
+      </g>
+      <text x="118" y="258" font-size="9" fill="#8a5a9a" opacity=".85"
+            transform="rotate(-16 118 258)">TRAFFIC LANE</text>
+      <!-- real coastline: Census 500k boundaries (see LIS_COAST) -->
+      ${LIS_COAST.map(p=>`<path d="${p}" fill="${land}" stroke="${landEdge}" stroke-width="1.5"/>`).join("")}
+      <!-- compass rose, in open water south of the forks -->
+      <g transform="translate(598,274)" stroke="#3d5f80" fill="none">
+        <circle r="15"/><circle r="2" fill="#3d5f80"/>
+        <path d="M0,-15 L4,0 L0,15 L-4,0 Z" fill="#3d5f80" stroke="none" opacity=".9"/>
+        <line x1="-15" y1="0" x2="15" y2="0" opacity=".6"/>
+      </g>
+      <text x="594" y="250" font-size="10" fill="#4a6a8a">N</text>
+      <!-- labels at projected positions -->
+      <g font-size="9" fill="#2c4a66">
+        <text x="452" y="66">CT RIVER</text><text x="524" y="50">THAMES</text>
+        <text x="488" y="148">ORIENT PT</text><text x="560" y="102">FISHERS IS</text>
+        <text x="540" y="162">SHELTER IS</text>
+      </g>
+      <text x="82"  y="168" font-size="11">GREENWICH</text>
+      <text x="128" y="152" font-size="13">STAMFORD</text>
+      <text x="176" y="132" font-size="11">NORWALK</text>
+      <text x="222" y="112" font-size="13">BRIDGEPORT</text>
+      <text x="296" y="64"  font-size="13">NEW HAVEN</text>
+      <text x="512" y="34"  font-size="13">NEW LONDON</text>
+      <text x="108" y="278" font-size="10">OYSTER BAY</text>
+      <text x="252" y="238" font-size="10">PORT JEFFERSON</text>
+      <text x="196" y="212" font-size="19" fill="#3d5f80" letter-spacing="5"
+            transform="rotate(-14 196 212)">LONG ISLAND SOUND</text>
+      <text x="556" y="214" font-size="12">MONTAUK</text>
+      <text x="140" y="300" font-size="15" fill="#3d5f80">LONG ISLAND</text>
+      <text x="230" y="34"  font-size="15" fill="#3d5f80">CONNECTICUT</text>
+      <text x="24" y="313" font-size="9" fill="#2c4a66">SOUNDINGS IN FEET · CHART 12363 · US CENSUS COASTLINE</text>
+      ${buoys}
+    </svg></div>
+    ${info}
+  </div>`;
+}
+
+/* ══════════════ VESTABOARD (quote page) ══════════════
+   Split-flap simulation: every tile starts blank and advances one character
+   per tick through the wheel — in wheel order, like the real hardware — until
+   it reaches its target, with a noise-burst clack while any flap is moving. */
+const VB_WHEEL=" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$()-+&=;:'\"%,./?";
+function vbSanitize(s){
+  return s.toUpperCase()
+    .replace(/[—–]/g,"-").replace(/[’‘]/g,"'").replace(/[“”]/g,'"')
+    .split("").map(c=>VB_WHEEL.includes(c)?c:" ").join("");
+}
+function vbLines(text,cols){
+  const words=vbSanitize(text).split(/\s+/).filter(Boolean);
+  const lines=[];let cur="";
+  for(const w of words){
+    if((cur?cur.length+1:0)+w.length<=cols) cur=cur?cur+" "+w:w;
+    else{ if(cur)lines.push(cur); cur=w.slice(0,cols); }
+  }
+  if(cur)lines.push(cur);
+  return lines;
+}
+function vestaboardHTML(q){
+  // Real Vestaboard geometry: 22 columns. Rows grow with the quote (min 6
+  // like the real board, blank rows pad top/bottom so the text sits centered).
+  const cols=22;
+  const rowsRaw=[...vbLines('"'+q.q+'"',cols),"",...vbLines("- "+q.a,cols)];
+  while(rowsRaw.length<5) rowsRaw.length%2?rowsRaw.push(""):rowsRaw.unshift("");
+  const rows=rowsRaw.map(l=>{
+    const pad=Math.floor((cols-l.length)/2);
+    return (" ".repeat(pad)+l).padEnd(cols," ");
+  });
+  const rowHTML=r=>`<div class="vb-row">${r.split("").map(ch=>
+    `<span class="vb-cell" data-t="${ch===" "?"":esc(ch)}"></span>`).join("")}</div>`;
+  // Color-chip strip, centered on the bottom row — Patriot Bank red/white/navy
+  const chipCols=["#b22234","#f5f6f8","#1e3f7a","#b22234","#f5f6f8","#1e3f7a","#b22234"];
+  const s=Math.floor((cols-chipCols.length)/2);
+  const chipRow=`<div class="vb-row">${Array.from({length:cols},(_,i)=>
+    (i>=s&&i<s+chipCols.length)
+      ?`<span class="vb-cell chip" style="--c:${chipCols[i-s]}"></span>`
+      :`<span class="vb-cell"></span>`).join("")}</div>`;
+  const totalRows=rows.length+1;   // + chip row
+  // Tile size: fill the width (88vw budget) unless height (54vh) binds first
+  const cs=`min(${(88/(cols*1.13)).toFixed(2)}vw,${(54/(totalRows*1.6)).toFixed(2)}vh)`;
+  return `<div class="vb-wrap" data-cols="${cols}" style="--cs:${cs}">${rows.map(rowHTML).join("")}${chipRow}</div>`;
+}
+let vbTimer=null,vbCtx=null;
+function stopVestaboard(){
+  if(vbTimer){clearInterval(vbTimer);vbTimer=null;}
+  if(vbCtx){try{vbCtx.close();}catch(e){} vbCtx=null;}
+}
+function animateVestaboard(){
+  stopVestaboard();
+  const LEN=VB_WHEEL.length;
+  const wrap=document.querySelector("#spotBody .vb-wrap");
+  const colsN=wrap?parseInt(wrap.dataset.cols)||22:22;
+  // Authentic pacing: every flap advances through the wheel at ~7 flips/sec,
+  // makes 1-2 full revolutions before its target, and starts as a wave from
+  // the top-left — the full board takes ~30-40s to settle like the real one.
+  const cells=[...document.querySelectorAll("#spotBody .vb-cell:not(.chip)")]
+    .map((el,i)=>{
+      const t=VB_WHEEL.indexOf(el.dataset.t||" ");
+      const r=Math.floor(i/colsN), c=i%colsN;
+      return {el,t,pos:0,
+        delay:c*2+r*6,                        // cascade wave (in ticks)
+        travel:t+LEN*(1+((r*3+c)%2))};        // 1-2 extra revolutions
+    })
+    .filter(c=>c.t>0);
+  const chips=[...document.querySelectorAll("#spotBody .vb-cell.chip")];
+  if(!cells.length)return;
+  let noise=null;
+  try{
+    vbCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(vbCtx.state==="suspended")vbCtx.resume();
+    noise=vbCtx.createBuffer(1,Math.floor(vbCtx.sampleRate*0.03),vbCtx.sampleRate);
+    const d=noise.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  }catch(e){vbCtx=null;}
+  const click=n=>{
+    if(!vbCtx)return;
+    try{
+      const src=vbCtx.createBufferSource(),g=vbCtx.createGain(),
+            f=vbCtx.createBiquadFilter();
+      src.buffer=noise;f.type="bandpass";
+      f.frequency.value=2200+Math.random()*1200;f.Q.value=1.2;
+      g.gain.value=Math.min(0.28,0.05+n*0.004);   // louder while more flaps move
+      src.connect(f);f.connect(g);g.connect(vbCtx.destination);src.start();
+    }catch(e){}
+  };
+  let tickN=0;
+  vbTimer=setInterval(()=>{
+    tickN++;
+    let active=0, waiting=0;
+    for(const c of cells){
+      if(c.pos>=c.travel) continue;          // settled on its letter
+      if(tickN<=c.delay){ waiting++; continue; }
+      c.pos++;
+      const ch=VB_WHEEL[c.pos%LEN];
+      c.el.textContent=(ch===" ")?"":ch;
+      active++;
+    }
+    if(active)click(active);
+    else if(!waiting){
+      chips.forEach((el,i)=>setTimeout(()=>el.classList.add("on"),i*90));
+      if(chips.length)click(8);
+      stopVestaboard();
+    }
+  },140);
+}
+
+/* ══════════════ FED WATCH ══════════════
+   2026 FOMC decision days (day 2 of each meeting, statement at 2:00 PM ET).
+   Verified against federalreserve.gov July 2026. SEP = quarterly projections. */
+const FOMC_2026=[[1,28],[3,18],[4,29],[6,17],[7,29],[9,16],[10,28],[12,9]];
+function fedWatchHTML(){
+  const now=new Date();
+  const mos=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  let next=null;
+  const rows=FOMC_2026.map(([m,d])=>{
+    const dt=new Date(2026,m-1,d,14,0,0);
+    const past=dt<now;
+    const isNext=!past&&!next;
+    if(isNext)next=dt;
+    return `<div class="fw-mt ${past?"past":""} ${isNext?"next":""}">
+      <span class="d">${mos[m-1]} ${d}</span>
+      ${[3,6,9,12].includes(m)?'<span class="sep">SEP</span>':""}</div>`;
+  }).join("");
+  const days=next?Math.max(0,Math.ceil((next-now)/86400000)):null;
+  return `<div class="fw-wrap">
+    <div class="fw-big">
+      <div class="n">${days==null?"—":days}</div>
+      <div class="l">DAYS TO FOMC</div>
+      ${next?`<div class="w">${mos[next.getMonth()]} ${next.getDate()} · 2:00 PM ET</div>`:""}
+    </div>
+    <div class="fw-grid">${rows}</div>
+  </div>`;
+}
+
+/* ══════════════ METRO-NORTH (Greenwich → GCT, scheduled) ══════════════
+   Same static New Haven Line schedule the LED panel uses (realtime MTA
+   departures are protobuf-only), shifted +10 min Stamford→Greenwich. */
+const MNR_WD=[430,530,600,615,630,645,700,709,716,724,731,739,746,754,
+  801,809,816,824,831,839,846,854,901,916,931,946,1001,1031,1101,1131,
+  1201,1231,1301,1331,1401,1431,1501,1531,1555,1613,1630,1700,1730,1800,
+  1830,1900,1930,2000,2030,2100,2130,2200,2230,2300,2330,30,100];
+const MNR_WE=[500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,
+  1700,1800,1900,2000,2100,2200,2300,30];
+function trainsHTML(){
+  const now=new Date();
+  const sched=(now.getDay()===0||now.getDay()===6)?MNR_WE:MNR_WD;
+  const curMin=now.getHours()*60+now.getMinutes();
+  const deps=sched.map(t=>{
+    const hm=(Math.floor(t/100)*60+t%100+10)%1440;
+    let diff=hm-curMin;
+    if(diff<0)diff+=1440;
+    return {diff,hm};
+  }).sort((a,b)=>a.diff-b.diff).slice(0,4);
+  const fmt=hm=>{let h=Math.floor(hm/60),m=hm%60,ap=h>=12?"PM":"AM";
+    h=h%12||12;return h+":"+String(m).padStart(2,"0")+" "+ap;};
+  return `<div class="tr-wrap introed">
+    <div class="intro intro-train"><span class="itr">${VEH.train}${VEH.reticle}
+      <b class="tlm">SVC NH LINE · DEP ${fmt(deps[0].hm)} · T-${deps[0].diff} MIN</b></span></div>
+    ${deps.map(d=>`
+    <div class="tr"><span class="m">${d.diff>=60?Math.floor(d.diff/60)+"h "+d.diff%60+"m":d.diff+"m"}</span>
+    <span class="t">${fmt(d.hm)}</span><span class="d">GREENWICH → GRAND CENTRAL</span></div>`).join("")}
+    <div class="tr-track"><span class="tr-anim">${VEH.train}</span></div>
+  </div>`;
+}
+
+/* ══════════════ PAINTING OF THE DAY ══════════════
+   Art Institute of Chicago open API — public-domain masterpieces with real
+   curatorial summaries. Curated ID rotation (all verified to have image +
+   short_description), one per day, cached like APOD. */
+const ART_IDS=[27992,6565,111628,28067,16568,20684,28560,80607,14598,64818,109780];
+async function fetchArt(){
+  try{
+    const today=new Date().toLocaleDateString("en-CA",{timeZone:"America/New_York"});
+    const cached=JSON.parse(localStorage.getItem("artday")||"null");
+    if(cached&&cached.date===today){S.art=cached;return;}
+    const doy=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+    const id=ART_IDS[doy%ART_IDS.length];
+    const u=`https://api.artic.edu/api/v1/artworks/${id}?fields=id,title,artist_display,date_display,short_description,image_id`;
+    let j=null;
+    try{ j=await jget(u); }catch(e){ if(PROXY_OK) j=await jget(viaProxy(u)); }
+    const d=j&&j.data;
+    if(d&&d.image_id){
+      S.art={date:today,title:d.title||"",artist:d.artist_display||"",
+        when:d.date_display||"",
+        desc:String(d.short_description||"").replace(/<[^>]*>/g,"").replace(/\s+/g," ").trim(),
+        img:`https://www.artic.edu/iiif/2/${d.image_id}/full/843,/0/default.jpg`};
+      localStorage.setItem("artday",JSON.stringify(S.art));
+    }
+  }catch(e){}
+}
+
+/* ══════════════ NASA APOD (daily, cached in localStorage) ══════════════ */
+async function fetchApod(){
+  try{
+    const today=new Date().toLocaleDateString("en-CA",{timeZone:"America/New_York"});
+    const cached=JSON.parse(localStorage.getItem("apod")||"null");
+    if(cached&&cached.date===today){S.apod=cached;return;}
+    const u="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&thumbs=true";
+    const j=await jget(PROXY_OK?viaProxy(u):u);
+    if(j&&(j.media_type==="image"||j.thumbnail_url)){
+      S.apod={date:j.date||today,title:j.title||"",
+        src:j.media_type==="image"?(j.url||j.hdurl):j.thumbnail_url,
+        by:(j.copyright||"NASA").replace(/\n/g," ").trim()};
+      localStorage.setItem("apod",JSON.stringify(S.apod));
+    }
+  }catch(e){}
+}
+
+/* ══════════════ WORLD CLOCK (analog + digital, ticks live) ══════════════ */
+// World coastline (110m GeoJSON, equirectangular 640x320, generated in scratchpad)
+const WORLD_PATH="M429 97L431 97L434 96L435 94L437 94L439 94L441 94L443 94L445 93L447 92L447 94L449 94L451 93L453 93L452 95L450 95L448 95L447 97L447 99L444 100L443 102L443 104L441 104L439 104L438 107L436 108L434 107L431 108L428 107L430 105L428 104L428 101L428 99L429 97ZM349 170L349 172L351 174L353 174L355 173L357 172L359 173L359 175L359 177L359 180L361 180L363 179L362 181L363 183L359 183L359 189L361 191L358 192L354 192L352 191L345 191L343 190L341 191L341 188L342 186L342 184L344 182L344 180L344 178L343 176L343 174L343 172L344 170L349 170ZM412 117L415 117L417 116L419 115L419 117L418 119L412 119L412 117ZM204 258L202 258L200 258L198 258L198 254L200 256L202 257L204 257ZM205 199L206 201L206 199L208 199L212 202L215 204L217 205L216 208L218 209L220 209L223 207L224 205L225 208L223 209L220 211L218 214L217 217L217 219L216 221L218 223L219 225L217 228L215 229L211 229L209 229L209 231L208 233L205 233L204 235L206 235L204 237L204 239L202 240L200 241L202 244L203 246L201 247L199 249L197 250L198 252L196 253L192 252L191 250L189 248L191 247L191 245L192 243L193 241L193 239L192 237L192 235L192 233L193 231L193 229L194 227L194 225L195 223L196 221L196 219L195 216L196 214L196 212L197 209L199 208L198 204L200 203L201 201L202 199L205 199ZM578 233L580 233L583 233L584 235L583 237L581 238L579 236L577 233ZM575 184L576 186L578 186L579 189L580 192L580 194L582 195L585 196L585 198L586 200L588 200L588 202L590 203L592 205L592 207L593 210L593 212L592 214L592 216L591 218L589 220L588 223L587 225L587 227L584 227L582 228L580 229L578 228L575 229L573 228L570 228L569 226L568 224L566 223L566 221L563 223L564 221L565 218L564 220L562 221L560 221L559 219L556 217L553 216L550 216L548 217L546 217L544 217L542 218L540 220L538 220L536 220L534 220L532 221L530 222L527 222L525 221L526 219L526 217L525 214L525 212L523 210L522 207L522 204L522 202L522 200L524 199L526 197L528 197L530 196L532 196L535 195L536 193L537 191L539 189L539 191L540 189L542 187L543 185L545 185L547 185L549 186L551 184L552 182L554 182L556 182L554 180L556 180L559 181L561 182L563 181L563 183L561 185L561 187L564 188L566 190L568 191L570 191L571 189L572 187L572 185L572 183L572 181L573 179L574 181L575 183ZM350 74L349 76L347 77L345 77L342 77L340 77L338 77L338 75L340 76L342 75L344 74L346 73L348 73L350 74ZM404 87L406 86L408 88L410 88L408 89L408 91L406 92L406 90L403 91L401 89L401 87L403 87ZM326 69L329 68L331 70L330 72L328 71L326 70L324 69L326 69ZM325 149L323 149L323 144L322 142L322 140L324 139L326 139L327 141L326 143L325 145L325 149ZM315 143L313 142L311 142L311 140L312 138L312 136L314 136L316 135L318 133L320 133L321 135L322 137L324 138L322 140L320 140L318 140L315 141L315 143ZM485 121L484 123L484 121L481 119L480 121L478 121L478 119L478 117L478 115L477 113L479 114L482 115L484 116L482 118L484 118L485 121ZM360 81L363 82L365 82L368 81L370 82L369 84L366 86L364 86L362 87L361 85L361 83L360 81ZM354 80L355 82L353 83L351 84L350 82L348 80L350 80L352 80L354 80ZM362 64L365 63L367 62L370 60L372 61L375 61L375 63L377 64L377 66L375 67L374 69L372 69L370 68L367 68L365 68L363 68L361 67L362 65ZM208 199L206 199L206 201L205 199L202 199L199 201L199 198L198 196L198 194L197 192L197 189L197 187L197 184L198 182L196 179L198 180L201 178L204 177L204 179L204 181L206 182L208 182L210 183L212 184L213 186L213 189L216 189L216 191L218 192L217 194L217 196L215 194L213 194L210 195L209 197L209 200ZM218 214L220 211L222 210L225 208L225 206L223 206L223 204L223 202L221 202L221 200L219 200L217 199L217 197L217 194L218 192L216 191L216 189L213 189L212 187L212 184L210 184L208 183L206 182L204 181L204 179L204 177L202 178L199 179L196 179L195 177L193 178L191 177L189 175L188 173L190 172L190 170L192 168L194 168L196 168L197 163L196 161L196 159L196 157L199 157L201 158L203 159L205 158L207 156L205 154L208 153L210 153L212 152L214 152L214 154L214 156L215 158L217 157L219 157L221 156L223 156L225 156L227 156L227 154L229 153L230 157L230 160L234 160L234 162L237 162L240 163L241 165L243 164L246 165L249 165L252 167L254 169L257 169L258 172L258 176L254 180L253 182L251 183L251 185L251 188L250 191L249 195L248 197L247 199L245 201L243 201L241 202L239 202L237 203L235 204L234 206L234 208L233 210L232 212L230 215L228 216L226 219L224 217L221 215L219 214ZM366 193L369 196L370 198L372 199L370 201L368 202L367 204L364 206L362 205L360 206L358 208L357 206L356 204L355 199L357 199L357 192L361 192L363 192L365 191L366 193ZM347 147L349 147L352 146L354 145L356 144L359 141L361 140L362 142L362 144L364 145L365 147L367 148L368 150L366 151L364 151L361 152L359 152L357 152L355 151L353 153L350 153L348 156L347 154L346 152L346 150L347 147ZM100 74L97 73L94 72L92 71L94 70L96 71L98 72L100 73ZM220 70L221 72L223 72L225 72L224 74L226 73L226 75L226 77L224 77L224 75L222 77L220 77L222 76L220 75L218 75L215 75L216 73L218 70L221 68L220 70ZM169 43L171 44L173 45L175 45L178 47L176 47L173 47L170 47L168 48L165 47L167 45L167 43L169 43ZM159 36L159 38L161 37L164 38L165 41L167 39L168 36L170 36L173 36L176 37L174 39L176 40L172 42L169 42L167 43L165 44L163 46L160 46L159 48L157 48L154 50L152 52L152 55L154 55L155 57L156 59L158 58L162 59L165 60L167 61L169 62L172 62L174 62L174 65L175 67L178 69L180 67L179 64L181 62L183 61L184 59L183 57L180 55L183 54L182 52L181 49L185 49L187 49L189 49L193 51L196 51L196 53L197 55L200 57L202 56L204 54L207 54L209 57L211 59L213 61L217 62L219 64L221 65L221 67L218 69L216 69L213 71L210 71L206 71L204 71L202 71L200 72L198 73L196 75L194 77L198 74L202 73L204 72L206 73L204 75L205 78L208 79L211 78L212 76L213 78L211 80L208 81L206 81L204 83L202 82L205 79L203 80L201 80L199 79L199 76L197 76L195 78L193 80L190 80L187 80L184 82L182 82L180 82L180 84L177 85L173 86L173 84L174 81L173 79L171 79L170 77L168 76L166 75L163 74L161 75L159 74L157 74L155 74L152 73L147 73L141 73L135 73L130 73L124 73L119 73L114 73L112 73L107 73L102 73L98 71L93 70L92 68L90 66L88 63L89 61L86 59L84 57L81 55L79 54L77 54L74 54L71 53L69 53L69 43L69 36L73 36L75 37L77 38L79 37L81 36L84 36L86 36L89 35L92 36L96 36L99 35L99 37L101 36L104 36L107 37L111 37L113 38L115 38L118 38L115 39L118 40L123 39L125 39L128 39L130 38L133 38L135 39L140 40L142 39L145 39L149 39L152 39L152 37L148 35L149 33L151 32L153 32L155 33L157 35L159 36ZM117 30L120 30L123 31L125 30L128 33L127 30L129 30L131 30L133 31L134 33L137 35L140 36L137 36L139 37L135 37L132 37L130 37L126 38L122 38L119 38L115 37L111 36L113 35L115 35L118 35L120 35L117 34L113 35L110 35L114 33L111 33L108 33L109 31L115 30L117 30ZM166 30L168 31L174 29L177 31L180 31L182 31L186 32L188 32L192 33L198 35L201 37L198 38L202 39L205 39L207 41L210 41L206 44L204 44L201 42L199 42L201 44L203 45L205 47L204 49L202 48L198 47L200 48L202 49L198 49L194 48L192 47L190 46L187 45L182 46L180 45L182 44L185 44L189 44L189 42L191 40L187 38L183 38L183 36L181 36L179 36L175 36L169 36L165 35L162 35L163 33L160 33L161 30L163 29L167 29ZM142 29L144 29L147 29L148 31L148 33L145 33L143 33L138 31L141 31L139 30L142 29ZM154 31L152 32L150 32L149 30L152 28L156 28L159 29L156 30L154 31ZM106 33L101 34L96 32L98 30L100 29L98 28L104 28L106 28L111 28L113 29L115 29L112 30L108 31L106 32ZM145 24L145 27L143 27L141 27L138 26L138 24L140 24L142 24L145 24ZM128 25L130 25L132 25L131 27L125 27L120 28L118 28L121 26L113 27L111 26L113 25L115 24L120 25L123 26L126 26L124 24L127 24ZM152 23L154 24L157 24L159 24L161 26L164 26L166 26L169 25L173 25L176 25L178 26L174 28L172 27L167 28L163 28L160 28L156 27L155 25L153 24L149 24L147 24L152 23ZM113 22L112 24L110 24L107 25L104 25L102 25L105 23L108 22L111 22L113 22ZM142 21L140 21L137 21L133 21L135 20L133 20L136 19L141 20ZM165 18L167 19L165 19L162 21L159 21L155 21L153 20L151 19L149 18L151 16L156 16L158 16L161 17L164 17ZM198 12L203 12L207 13L210 13L206 14L201 15L204 15L199 16L196 17L193 18L190 18L183 19L186 19L184 20L186 20L184 21L182 22L178 23L181 23L177 25L172 24L167 24L164 24L161 24L164 23L164 21L169 22L167 21L164 21L168 20L166 18L170 17L172 18L174 17L170 17L164 17L161 16L158 15L160 14L162 14L165 14L168 13L170 13L172 14L176 12L179 12L184 12L191 12L194 12L198 12ZM337 76L339 77L336 77L334 79L332 78L332 76L335 75L337 76ZM198 254L198 258L200 258L198 259L196 258L194 258L192 257L190 256L187 254L189 254L191 255L194 256L195 254L197 253ZM199 198L199 201L201 200L200 203L198 204L198 207L197 209L196 211L196 214L195 216L195 219L196 221L195 223L194 225L194 227L194 229L193 231L192 233L192 235L192 237L192 239L193 241L192 243L191 245L191 247L189 248L190 250L192 252L196 253L198 253L196 253L194 254L194 256L191 255L189 254L187 253L187 251L186 247L186 245L188 243L186 243L187 241L188 238L190 239L191 235L189 237L188 234L189 231L189 228L189 226L191 223L192 220L193 218L193 215L193 211L194 209L194 206L195 202L195 198L195 195L195 193L196 191L197 194L198 196L199 198ZM547 72L550 72L552 73L553 75L556 75L560 74L558 76L558 78L557 80L554 79L553 82L553 84L551 84L548 85L546 86L544 87L542 88L538 90L535 91L536 89L536 87L533 89L530 90L530 92L533 94L535 93L538 93L535 95L533 97L534 99L534 101L536 102L537 104L536 106L537 108L536 110L534 112L533 114L531 116L529 118L526 119L524 120L522 120L519 122L517 122L516 124L515 122L513 121L510 121L510 119L508 119L506 119L504 120L502 120L501 122L499 122L496 121L497 119L495 117L494 115L495 112L494 110L491 109L488 108L486 109L484 110L482 110L480 110L478 111L475 110L473 110L471 109L469 108L466 106L464 106L462 105L460 104L459 102L461 102L460 100L458 97L455 96L454 94L453 92L451 92L451 90L453 88L456 88L459 87L462 85L464 83L462 80L466 79L468 76L471 76L472 74L474 74L476 72L476 74L478 75L480 75L482 77L481 79L484 80L486 80L488 81L490 83L493 84L497 84L499 84L501 84L504 85L506 85L509 85L512 84L514 84L516 84L518 83L518 81L520 80L522 80L526 79L529 77L531 77L533 77L531 75L529 75L527 75L525 74L527 73L527 71L530 72L532 71L534 68L534 66L537 65L540 65L542 65L544 66L545 68L546 70L547 72ZM315 151L313 151L310 151L308 152L306 152L307 150L305 149L305 147L305 145L306 143L308 142L310 142L312 143L314 142L315 145L315 147L314 149L315 151ZM343 156L341 156L337 156L337 153L335 152L336 150L338 147L340 148L341 146L343 145L343 143L344 141L346 139L345 137L347 139L347 141L345 142L346 144L347 146L346 149L346 151L347 153L348 155L348 157L345 156L343 156ZM375 154L375 156L373 158L373 160L373 162L372 164L372 166L372 168L372 170L373 172L375 175L372 175L371 177L371 179L370 181L372 182L373 184L371 184L370 182L368 181L366 181L364 180L362 179L360 180L359 178L359 176L359 174L356 173L354 174L352 174L350 173L349 170L344 170L342 171L342 169L344 169L346 169L348 167L348 165L349 163L351 161L352 159L352 157L353 155L353 153L355 151L357 152L359 152L361 152L363 151L365 151L367 151L369 151L371 152L373 152L375 154ZM343 168L341 169L340 167L340 165L342 164L345 164L346 162L345 160L345 158L343 157L345 156L347 157L349 154L352 154L352 156L352 158L351 160L350 162L348 165L348 167L346 169L344 168ZM186 160L184 159L182 159L180 158L180 156L182 154L183 152L182 150L182 148L182 146L185 143L186 141L188 140L191 139L193 138L192 140L190 141L190 143L191 145L191 147L194 147L197 149L199 149L200 151L200 153L199 155L201 156L201 158L200 156L196 157L197 159L196 161L197 163L196 168L194 167L195 165L193 164L191 164L189 162L186 160ZM173 145L171 145L171 143L169 142L167 142L168 140L170 140L172 142L173 144ZM174 119L177 119L179 120L181 120L183 121L185 122L187 123L187 125L184 125L182 125L182 123L180 123L177 121L175 121L173 120L171 121L169 121L171 119L173 119ZM350 74L348 73L346 73L344 73L342 72L343 70L345 69L347 69L349 70L351 70L353 71L352 73L350 73ZM338 62L339 64L341 64L344 64L346 65L346 67L347 69L345 69L343 70L342 72L344 73L343 75L340 76L338 76L335 75L333 75L334 73L332 73L331 71L331 68L333 66L334 64L336 64L335 62L337 63ZM339 60L337 61L337 63L335 62L334 59L337 58L339 57L338 59ZM193 125L195 125L197 126L199 127L197 127L195 128L193 129L193 127L193 125ZM341 118L335 122L330 125L328 126L326 126L324 124L317 119L311 116L305 111L305 109L307 107L309 107L311 107L313 105L315 104L318 103L317 100L316 97L318 97L320 96L323 95L326 95L329 94L331 94L333 94L335 94L335 97L333 99L334 101L336 103L337 106L337 108L337 110L337 112L337 114L338 116L341 117ZM177 166L178 164L176 164L176 162L178 159L180 158L182 159L184 160L186 160L186 162L184 165L182 165L181 167L179 169L177 168L177 166ZM382 108L381 110L379 109L378 107L378 109L379 111L381 114L383 117L383 119L385 121L378 121L372 121L364 121L364 114L364 108L364 105L367 104L369 104L371 105L373 105L375 104L377 105L379 105L381 104L382 108ZM395 138L394 136L391 134L388 134L385 134L385 131L386 129L388 128L389 130L390 132L393 134L395 136L397 137L395 138ZM304 86L304 84L306 82L308 83L310 83L312 83L314 83L317 83L321 84L323 85L325 84L325 86L321 87L320 89L320 91L319 93L317 93L316 95L314 95L312 95L310 96L308 94L308 92L307 90L308 88L309 86L307 85L305 85ZM363 57L361 55L364 54L366 54L368 54L370 54L369 56L369 58L367 58L365 57L363 57ZM387 133L390 134L393 135L395 137L394 139L396 140L396 142L398 144L403 146L405 146L400 151L398 151L396 152L394 153L392 152L390 154L388 154L386 152L384 152L383 150L382 148L380 146L380 143L381 141L383 139L384 136L385 134L387 135L387 133ZM371 37L373 40L374 43L373 45L373 47L376 48L374 50L370 52L367 53L364 53L361 54L358 52L358 50L358 48L360 47L364 45L365 43L362 43L362 39L359 38L357 37L360 38L362 38L364 38L366 37L369 35L372 36ZM326 70L328 71L330 72L332 73L334 73L333 75L331 77L332 79L332 81L332 83L328 83L326 83L323 85L321 84L317 83L318 78L316 76L312 75L312 73L314 73L317 74L317 72L322 71L323 69L325 70ZM340 167L338 165L336 162L337 160L337 158L340 158L340 156L342 156L344 158L345 160L346 162L345 164L343 164L341 164L341 166ZM315 56L313 58L315 57L317 57L316 59L314 60L316 61L318 63L320 65L323 66L322 68L321 70L319 70L316 70L314 71L312 71L310 71L312 69L314 69L311 68L312 66L314 65L314 63L311 63L312 61L310 62L310 60L310 57L313 56L315 56ZM394 86L394 84L392 83L395 83L398 84L401 84L402 86L400 86L397 87L394 86ZM322 149L319 151L317 152L315 151L314 149L315 147L315 145L315 143L315 141L318 140L320 140L321 142L321 145L321 147L321 149ZM305 146L303 147L303 145L301 145L301 143L299 142L297 143L295 142L293 140L295 139L297 138L299 138L301 138L303 138L305 140L306 142L306 145ZM367 86L365 87L362 88L360 88L362 90L362 92L360 94L358 93L357 91L357 89L357 87L359 87L361 87L364 86L366 87ZM237 13L243 12L249 12L251 11L258 11L272 12L283 13L280 14L273 14L263 14L270 14L276 15L279 14L281 15L279 16L283 15L292 14L297 15L291 17L284 17L288 18L286 19L285 22L287 23L284 23L281 24L285 25L283 26L286 28L282 28L284 29L281 30L278 30L280 31L277 31L281 33L278 35L275 33L273 35L278 35L280 35L276 37L271 38L265 39L262 40L259 41L255 43L252 43L249 44L248 46L244 49L244 51L243 53L240 53L238 52L234 52L232 51L231 49L228 47L227 44L225 42L226 38L228 38L230 36L228 36L225 37L223 36L223 34L225 34L229 35L226 33L224 33L222 33L223 31L220 29L218 27L216 26L211 25L207 25L203 25L198 25L196 24L193 23L198 23L201 22L194 22L190 21L197 20L203 19L199 18L201 17L207 16L209 15L213 14L218 14L224 14L226 14L230 13L235 14L237 14L241 15L237 14ZM160 136L158 135L156 134L157 131L159 131L157 129L160 128L162 128L162 130L161 132L163 132L161 134L160 136ZM227 156L225 156L223 156L224 154L223 151L225 150L228 152L227 154L227 156ZM214 145L216 147L218 149L218 151L217 153L218 155L219 157L217 157L215 158L214 156L214 154L214 152L212 151L211 149L213 147L214 145ZM165 137L164 135L162 135L162 133L164 132L166 132L168 132L170 132L172 133L170 134L168 135L166 136ZM353 78L354 80L352 80L350 80L348 80L349 82L351 83L353 84L351 84L348 83L347 81L345 80L347 79L349 77L351 78L353 79ZM190 125L193 125L193 127L191 128L189 128L191 127L191 125L189 125ZM349 77L349 75L351 75L353 75L355 74L357 74L359 74L358 76L357 78L355 78L353 78L351 78L349 77ZM513 172L517 172L520 172L521 174L524 174L526 175L524 176L522 175L520 175L518 175L515 174L513 174L509 173L507 172L509 170L511 171L513 171ZM558 162L559 165L561 166L562 164L564 163L566 163L569 164L571 165L571 170L571 176L569 175L567 174L565 175L567 173L566 171L562 168L560 168L558 166L556 167L555 165L557 164L555 164L553 163L554 161L558 161ZM543 157L541 159L538 159L535 159L533 161L535 163L539 161L538 163L536 163L538 166L539 168L538 170L538 168L536 169L536 167L535 165L534 167L534 170L532 170L533 168L532 166L532 164L532 162L533 160L535 158L539 158L541 158L543 157ZM549 158L549 160L547 160L548 162L547 160L546 158L547 156L549 157ZM530 157L532 158L529 159L529 161L527 163L526 167L524 167L522 166L519 166L517 165L516 163L514 161L514 159L515 156L515 158L518 158L520 157L522 158L524 157L525 155L526 152L528 152L530 153L530 156ZM508 170L506 170L502 168L502 166L500 165L498 161L496 160L496 158L494 156L493 154L491 153L490 151L493 151L495 152L496 154L499 156L501 156L502 158L505 160L505 162L506 164L508 164L508 168L508 170ZM458 97L460 99L461 101L459 102L460 104L462 105L464 106L462 109L464 109L466 110L468 111L471 112L473 113L475 113L477 113L477 111L480 112L482 112L484 112L484 110L486 109L488 108L490 108L492 109L493 111L491 112L489 113L488 115L487 118L485 120L484 118L482 118L484 116L482 115L480 115L477 113L478 115L478 117L478 119L478 121L475 122L474 124L471 125L469 127L468 129L466 130L464 132L462 133L463 135L463 137L462 139L462 142L460 143L459 145L456 144L455 142L455 140L453 137L453 135L451 132L450 128L449 126L449 124L449 122L447 123L445 123L443 121L443 119L441 118L446 117L446 115L445 113L446 110L448 110L451 107L452 105L454 103L452 102L451 99L455 99L457 98ZM309 64L309 66L305 68L302 68L304 66L303 64L305 63L307 62L307 64L309 64ZM416 94L419 93L421 92L424 93L427 95L429 95L429 97L428 99L428 101L428 103L430 104L428 107L430 109L432 110L432 112L430 113L429 115L426 115L424 114L422 114L421 112L419 112L417 113L415 112L413 111L410 109L409 106L407 106L405 106L405 104L404 102L402 101L401 98L401 96L400 94L399 92L398 90L400 89L401 91L403 91L405 90L406 92L409 94L413 95L416 94ZM401 96L402 98L401 100L404 102L405 104L405 106L403 108L399 108L394 105L392 103L390 103L389 101L393 99L394 97L393 95L395 94L398 94L400 94L401 96ZM294 42L296 44L293 46L288 47L284 47L280 46L277 45L281 44L277 43L281 42L283 43L286 42L288 43L291 42L294 42ZM342 77L345 77L345 79L343 79L342 81L344 83L347 85L349 86L351 87L353 88L350 88L351 90L349 92L348 90L346 88L344 87L342 86L340 85L338 82L336 81L334 82L332 81L333 79L335 78L338 78L340 77L342 76ZM383 102L385 103L389 101L390 103L386 104L388 106L385 107L382 108L383 105L383 103ZM571 94L570 96L569 98L567 98L564 98L561 101L560 98L557 99L555 100L553 100L555 101L553 104L551 104L551 102L552 100L554 98L556 97L559 96L561 97L563 94L567 93L569 90L569 88L571 86L572 89L571 92L571 94ZM576 81L578 81L579 83L576 84L572 84L571 86L569 86L569 84L571 83L572 80L574 81L576 81ZM446 85L443 86L442 88L439 87L438 85L435 82L432 82L430 83L429 81L427 80L424 79L419 80L419 87L417 85L414 85L411 83L409 81L411 81L413 79L415 78L413 77L411 76L409 77L407 78L407 76L405 75L403 74L403 72L405 70L407 70L410 68L413 68L417 69L419 70L421 69L424 69L426 70L429 70L427 68L428 66L430 66L428 65L436 63L441 62L443 62L446 62L447 64L451 64L457 63L458 65L462 70L466 70L468 69L470 71L472 72L474 71L475 73L472 74L472 76L468 76L467 79L462 80L464 83L463 85L461 84L458 84L455 84L452 83L448 84L446 85ZM393 162L393 164L391 166L390 168L387 167L381 162L380 160L382 158L382 155L380 152L382 151L384 151L386 152L388 154L390 154L392 152L394 153L393 155L393 162ZM446 85L448 84L451 84L454 84L458 84L461 84L463 85L460 86L457 87L454 88L451 89L448 90L445 90L443 90L446 89L448 89L450 87L448 86L445 86L447 85ZM504 141L502 138L502 136L505 134L507 135L509 135L511 135L511 138L508 139L509 141L507 141L505 141ZM548 91L550 93L550 95L550 97L548 98L546 99L545 97L544 95L546 94L544 93L546 92L548 92ZM507 135L508 132L506 131L506 129L503 127L500 129L500 127L500 125L498 124L500 122L501 120L503 121L503 123L506 123L506 125L507 127L508 129L511 132L511 135L509 134L507 135ZM306 152L304 151L302 150L300 148L301 146L303 145L303 147L305 146L305 148L307 150L306 152ZM346 119L344 119L341 118L339 116L337 114L337 112L337 110L337 108L337 106L338 104L340 102L343 102L345 102L347 103L350 105L352 105L354 106L356 105L356 103L358 102L361 102L363 103L365 104L364 107L364 114L364 121L364 124L362 124L355 122L348 118L346 119ZM360 63L358 62L357 60L359 60L362 60L364 60L367 61L365 63L363 64L361 64ZM357 60L358 58L360 57L361 59L363 59L363 57L365 57L367 58L369 58L370 60L368 61L365 60L362 60L359 60L357 60ZM311 96L314 97L316 97L317 99L318 102L315 103L313 105L311 106L309 107L307 107L305 109L305 111L303 112L301 112L299 114L298 116L295 118L295 120L294 122L290 122L291 120L292 118L293 116L294 114L296 113L297 111L299 110L301 109L303 107L303 105L303 103L305 101L308 99L309 96L311 96ZM367 74L369 74L371 74L372 76L373 78L371 77L371 79L370 77L368 75ZM408 182L409 184L409 186L410 188L408 188L408 190L408 192L407 194L406 196L405 200L405 202L404 204L402 205L400 205L398 204L398 202L397 200L397 198L399 196L399 194L398 191L399 189L401 188L403 187L405 186L405 184L407 183L407 181ZM147 114L147 116L146 119L146 121L147 123L148 125L150 127L152 128L154 127L156 127L159 126L159 123L161 122L163 122L165 122L165 124L164 126L164 128L162 128L160 128L158 128L158 130L156 133L154 132L152 131L149 132L147 132L144 131L141 129L139 129L136 127L133 126L132 124L133 122L132 120L130 118L128 116L126 115L126 113L124 112L123 110L121 109L119 107L119 105L117 104L116 106L118 108L120 111L122 113L123 115L123 117L125 118L123 117L121 116L120 114L118 112L115 111L117 110L116 108L114 106L112 104L112 102L114 102L116 102L119 103L123 104L126 104L128 104L131 104L133 106L135 108L137 108L139 107L141 108L142 110L143 112L145 114L147 114ZM298 134L300 133L302 133L310 132L309 123L309 116L311 116L317 119L323 123L325 125L328 126L328 130L326 132L322 133L320 133L318 133L316 134L314 136L312 136L312 138L311 140L310 142L308 141L306 142L305 140L304 138L302 139L300 138L299 136L298 134ZM497 124L495 125L494 127L494 129L496 131L495 133L496 135L496 137L497 139L496 141L495 139L495 137L494 134L494 131L492 131L490 132L487 131L488 129L486 126L484 123L485 121L486 119L486 117L488 116L489 114L491 112L493 112L493 110L495 111L495 114L494 118L496 119L496 121L498 121L500 121L498 123ZM476 72L478 72L481 71L484 70L486 70L489 71L493 72L495 70L496 67L498 68L501 69L504 71L506 71L508 70L510 71L512 71L514 72L517 73L521 72L523 71L525 71L527 71L527 73L525 74L527 75L529 75L531 75L533 76L531 77L529 77L527 78L523 79L520 80L518 81L518 83L516 84L514 84L512 84L509 85L507 86L504 85L501 84L499 84L497 84L493 84L491 84L489 81L486 80L484 80L482 79L482 77L480 75L478 75L476 74L476 72ZM381 180L383 180L385 181L387 181L390 179L392 178L392 181L392 185L392 187L391 189L389 190L387 191L385 193L383 195L383 198L383 201L383 203L381 204L379 205L379 207L377 208L377 206L377 203L375 200L377 198L378 196L378 193L378 190L376 189L374 188L374 186L379 185L381 186L381 188L382 190L384 188L383 186L382 184L381 182L381 180ZM298 134L296 131L294 130L292 131L291 129L291 126L291 124L290 122L297 122L297 120L299 118L299 114L305 114L305 111L311 116L309 116L309 123L310 131L303 132L301 133L299 133ZM381 180L381 182L381 184L383 185L384 188L382 190L381 188L381 186L379 185L379 183L379 181L379 179L379 177L381 178L381 180ZM500 149L502 149L504 151L504 153L504 155L505 157L502 157L500 155L499 153L498 151L498 149L500 149ZM531 152L528 152L526 152L525 154L524 157L522 158L520 157L518 158L516 159L515 156L518 157L518 155L521 154L523 152L525 152L525 150L527 149L529 149L532 150L531 152ZM349 211L348 209L347 206L346 202L346 200L344 197L343 195L341 192L342 190L344 190L352 191L354 192L358 192L361 191L363 191L365 191L363 192L361 192L358 192L357 199L355 199L355 204L355 211L353 212L351 211L349 211ZM324 139L322 137L321 135L321 133L325 133L327 131L328 126L330 125L335 122L341 118L344 119L346 119L347 122L348 124L347 128L347 130L345 132L344 134L345 136L345 138L344 136L342 137L340 136L338 136L336 137L334 136L332 137L330 135L328 136L327 138L325 138ZM335 152L333 152L330 152L329 150L326 149L325 146L325 144L327 142L326 140L327 138L327 136L330 135L332 137L334 136L336 137L338 136L340 136L342 137L344 136L345 138L344 141L343 143L343 145L341 146L341 148L339 147L337 149L335 152ZM168 140L166 139L164 137L166 136L168 135L170 134L172 133L172 135L171 137L171 139L171 141L169 140ZM331 65L333 66L332 68L331 70L329 68L327 69L328 66L331 65ZM370 33L376 35L373 35L375 36L372 37L369 35L367 36L364 38L362 38L360 38L358 37L356 37L352 38L350 39L347 42L344 45L342 46L341 48L341 50L342 53L340 54L338 54L335 56L333 57L330 56L329 54L329 50L331 49L335 47L339 45L342 43L346 39L349 38L354 36L358 35L361 35L364 34L367 34L370 33ZM352 18L358 20L354 20L353 22L351 22L348 24L344 22L346 22L343 21L340 20L339 18L343 18L347 18L350 18L352 18ZM365 17L369 18L366 19L361 19L356 19L353 18L351 17L356 17L359 17L361 17L365 17ZM477 110L477 112L475 113L473 113L471 112L468 111L466 110L464 109L462 109L463 107L465 106L468 108L470 109L473 110L475 110L477 110ZM628 233L630 234L628 236L628 238L626 238L624 240L623 242L621 243L619 243L616 242L617 240L619 238L622 237L624 236L625 234L627 232ZM630 224L632 226L634 227L636 227L637 229L635 230L634 232L632 234L630 233L632 232L629 230L631 228L631 226L629 224L627 221L629 222L630 224ZM425 122L424 124L423 126L421 127L419 128L417 130L415 130L412 126L418 124L419 121L418 119L419 117L421 117L423 118L425 119L426 121ZM454 94L455 96L458 97L455 99L452 98L452 101L454 103L452 104L451 107L449 109L446 110L444 112L445 114L446 117L442 117L440 117L438 115L435 115L432 115L429 115L430 113L433 112L432 110L430 109L428 107L431 108L433 108L436 108L438 107L438 105L440 104L442 104L443 102L445 101L447 99L447 97L448 95L450 95L452 95L454 94ZM182 147L181 145L179 144L177 145L178 147L176 147L174 145L173 143L175 144L177 144L179 143L181 144L183 146ZM196 191L195 193L193 192L189 189L186 187L184 185L183 182L181 178L179 175L178 173L176 171L175 168L177 166L177 168L179 169L181 167L182 165L184 165L186 163L186 160L188 161L190 164L192 164L194 164L194 167L196 168L194 168L192 168L190 169L190 171L189 173L189 175L190 177L192 178L195 177L195 180L198 182L197 184L197 186L197 188L196 191ZM545 145L545 147L544 149L544 147L543 149L541 149L541 147L539 147L537 148L537 146L539 145L542 145L543 143L545 144ZM536 127L538 130L536 132L536 135L538 135L540 135L541 137L539 137L537 135L535 136L535 134L533 133L533 131L534 129L535 127ZM590 170L588 171L586 171L584 170L586 170L588 170L590 168L590 170ZM582 173L584 176L587 177L588 179L586 178L583 178L581 176L580 174L577 174L575 175L574 177L571 176L571 170L571 165L574 166L577 167L579 169L582 171L582 173ZM347 69L346 67L346 65L349 63L351 62L353 63L355 63L357 63L360 63L362 64L362 66L362 68L363 70L360 72L358 72L356 72L354 72L351 71L349 70L347 69ZM552 85L551 87L549 88L547 89L547 91L545 93L543 93L542 91L542 89L544 87L546 86L548 86L550 85L552 85ZM304 86L306 86L308 86L308 88L307 90L307 92L307 94L305 94L304 92L303 90L304 88L304 86ZM209 200L209 197L210 195L213 194L215 194L217 195L217 197L217 199L219 200L221 200L221 202L223 202L223 204L223 206L221 209L218 209L216 208L218 206L215 204L213 203L209 200ZM360 75L362 75L364 75L366 75L368 74L369 76L370 78L372 79L371 82L368 81L366 82L363 82L361 82L359 81L357 79L358 76L360 75ZM575 70L577 73L575 72L573 75L575 77L573 78L572 75L572 73L573 69L572 65L574 64L575 66L575 68L575 70ZM9 42L14 41L18 43L16 43L13 44L13 46L11 46L7 45L5 44L3 44L2 42L0 43L0 37L4 39L9 41ZM422 34L415 34L412 33L413 31L417 29L415 29L419 27L423 26L429 24L435 24L438 23L441 23L435 25L429 26L424 28L421 30L419 31L419 33L422 34ZM510 23L512 24L517 24L521 24L523 25L520 27L516 28L514 28L517 28L519 29L521 28L522 30L525 29L531 29L539 30L543 29L546 29L549 30L548 32L551 33L553 34L555 32L558 33L561 33L564 33L566 33L569 33L567 31L570 30L586 32L592 34L599 34L603 34L604 36L606 37L608 36L612 36L615 36L618 36L621 38L624 37L622 36L629 36L632 36L638 37L640 37L640 44L638 45L635 45L637 46L638 48L635 49L630 50L626 52L623 53L620 52L616 54L613 54L611 54L608 56L610 58L610 60L608 60L607 62L605 63L604 65L602 66L601 68L599 69L597 65L596 62L597 59L599 58L602 57L605 55L608 53L611 51L612 49L610 49L605 52L603 50L599 51L594 54L596 55L592 55L589 56L589 54L586 54L584 55L579 55L573 55L567 59L560 63L563 63L566 64L569 64L571 66L570 69L570 71L569 74L566 76L566 78L563 80L561 82L557 84L555 83L553 84L553 82L553 80L557 80L558 78L558 76L560 74L557 74L553 75L552 73L550 72L547 72L546 70L545 68L544 66L542 65L540 65L537 65L535 65L535 67L532 70L530 72L527 71L525 71L523 71L521 72L518 72L514 72L512 71L510 71L508 70L506 71L504 71L502 70L499 68L496 67L494 69L493 72L490 71L487 70L484 70L481 71L478 72L476 72L474 71L472 72L470 71L468 69L466 70L463 69L458 65L456 64L452 65L448 63L446 62L443 62L441 62L437 63L429 64L430 66L428 66L427 68L429 69L427 70L424 69L421 69L419 70L417 69L413 68L410 68L407 70L405 70L403 72L403 74L405 75L407 76L407 78L405 79L403 81L405 82L404 84L406 86L404 87L402 86L401 84L399 84L395 83L393 83L391 83L389 81L387 81L385 80L388 78L390 76L388 76L391 75L391 73L389 71L386 70L383 70L381 69L380 67L378 67L376 66L378 65L376 64L375 62L373 61L370 60L369 58L369 56L370 54L372 53L370 52L374 50L376 48L373 47L373 45L374 43L372 41L371 38L375 36L377 36L380 37L385 37L392 39L393 41L391 42L388 43L380 41L382 43L382 45L384 46L386 46L386 44L390 45L392 45L395 42L398 43L399 41L399 39L397 38L402 39L401 41L405 41L409 39L415 38L417 38L415 39L417 39L419 38L422 38L425 38L427 39L429 37L427 36L433 36L435 37L442 39L441 37L439 37L439 34L442 32L444 30L449 31L448 33L449 35L449 37L451 38L450 40L447 42L449 42L451 41L453 40L453 37L451 37L452 34L450 33L453 32L454 30L454 33L456 34L455 32L458 32L462 31L465 32L463 31L463 29L466 29L470 29L474 29L475 26L477 26L480 26L485 25L490 25L492 25L496 24L499 24L501 23L506 22L509 22L506 23L510 23ZM411 17L409 17L407 17L405 18L403 17L400 17L403 16L406 16L409 16L412 17ZM498 20L494 20L489 19L486 19L482 17L487 16L491 16L494 16L498 18L498 20ZM304 112L305 114L299 114L299 118L297 119L297 122L290 122L294 122L295 120L295 118L298 116L299 114L300 112L302 112L304 112ZM396 131L395 129L393 127L393 125L391 124L390 122L389 120L388 118L386 116L386 114L384 113L383 111L382 109L384 108L387 107L386 104L389 103L392 103L394 105L399 108L403 108L405 109L407 111L409 113L410 115L412 117L412 119L418 120L418 124L412 126L407 127L404 130L402 129L400 129L398 129L396 131ZM380 143L379 141L379 138L377 139L377 141L376 143L373 142L371 143L369 143L367 143L366 141L364 143L362 145L362 143L361 141L360 139L359 137L359 135L360 133L362 132L362 125L364 124L364 121L372 121L378 121L386 121L386 123L386 125L387 127L387 129L385 131L385 134L384 136L384 138L382 140L380 143ZM380 143L380 145L381 147L383 150L380 152L378 153L376 153L373 153L371 152L369 151L367 149L365 147L364 145L362 145L364 144L365 142L367 143L369 143L371 143L373 142L375 143L377 141L377 139L379 138L379 140L380 142ZM290 136L290 134L290 132L292 131L294 130L296 131L297 133L298 135L299 137L297 138L292 138L290 138L292 137L294 136L292 136L290 136ZM300 148L298 147L297 145L297 143L299 142L301 143L301 145L300 147ZM407 143L405 146L403 146L398 144L396 142L397 140L399 141L401 141L403 141L405 140L407 140L407 142ZM408 139L410 139L411 141L410 144L409 146L408 148L406 151L403 155L401 156L398 158L395 162L393 162L393 155L394 153L396 152L398 151L400 151L405 146L406 144L407 142L407 140ZM357 79L359 81L361 83L360 85L358 85L358 83L356 84L354 83L354 81L354 79L356 78ZM218 149L221 150L224 150L223 153L224 155L222 156L220 156L218 155L217 153L217 151L218 149ZM354 72L356 72L358 72L360 73L357 74L355 74L353 75L351 75L350 73L352 73L354 72ZM359 43L358 45L355 47L352 48L350 51L352 52L352 55L350 56L349 59L346 60L343 62L342 60L341 58L340 55L342 53L342 51L341 48L342 46L344 46L347 42L349 40L352 39L355 38L357 37L359 38L362 39L362 42L359 43ZM389 101L385 103L383 102L384 100L385 98L384 96L386 95L388 94L390 95L392 94L395 94L393 95L394 97L393 99L389 101ZM346 137L345 135L345 132L347 130L347 128L348 125L348 123L346 119L348 118L355 122L362 125L362 132L360 133L360 135L359 137L360 139L359 141L357 143L354 144L352 146L350 147L347 147L347 145L345 143L347 142L347 139L346 137ZM323 149L321 149L321 147L321 145L321 143L320 141L322 140L322 142L323 144L323 148ZM502 138L499 138L500 136L498 136L498 138L497 141L496 144L498 144L499 147L501 148L501 150L498 148L496 146L494 145L495 142L497 139L496 137L496 135L495 133L496 131L494 129L493 127L495 125L497 124L499 124L500 127L500 129L502 128L505 128L506 131L508 132L508 134L505 134L503 135L502 138ZM446 88L444 89L448 90L451 90L451 92L453 92L451 93L449 94L447 94L447 92L445 92L443 94L441 94L442 92L440 90L442 90L443 88L446 87L446 89ZM429 97L429 95L427 95L425 93L422 92L420 93L417 94L416 91L414 90L414 87L416 88L416 86L414 86L416 85L419 87L422 87L423 85L427 85L427 87L429 87L431 89L433 90L436 92L438 92L438 94L435 94L434 96L432 96L429 97ZM337 106L336 103L334 101L333 99L335 97L335 95L337 94L340 94L339 96L339 98L338 100L340 101L339 103L338 105ZM386 87L388 87L390 87L392 87L394 86L396 86L398 88L400 89L398 90L399 92L400 94L398 94L396 94L393 94L390 95L388 94L386 95L384 96L382 95L380 96L378 96L376 95L374 95L371 95L369 95L368 93L368 91L368 88L371 88L375 87L378 86L380 85L383 85L386 87ZM380 162L387 166L390 168L389 171L390 173L390 175L391 178L388 180L385 181L383 180L381 180L381 178L378 176L376 176L374 173L372 171L372 168L374 167L375 165L375 163L377 162L380 162ZM377 162L375 162L373 163L373 161L373 159L374 157L375 154L377 154L379 153L381 154L382 157L381 159L380 162L377 162ZM377 67L380 67L381 69L383 70L385 71L388 71L391 72L391 74L389 75L387 76L385 77L382 78L385 79L383 80L380 81L378 79L380 78L376 78L374 78L372 79L370 79L371 77L373 78L372 76L371 74L369 74L367 74L365 75L363 75L361 74L359 74L360 72L362 71L362 68L364 68L367 68L369 68L371 69L374 69L375 67L377 67ZM218 214L220 215L223 216L225 218L225 220L222 222L220 222L218 221L216 220L217 217L217 215ZM151 72L154 74L157 74L159 74L161 75L163 74L165 75L168 76L170 77L172 78L174 81L174 83L173 85L176 85L180 84L180 82L182 82L184 82L186 80L190 80L193 80L195 78L197 76L199 76L199 79L201 80L199 81L197 82L195 82L194 84L195 86L192 87L190 87L192 87L190 88L188 88L187 91L185 94L184 92L184 90L184 92L184 94L185 97L182 99L180 100L177 102L175 104L175 107L177 109L178 112L178 114L176 115L174 112L173 110L173 108L171 107L169 107L166 106L164 106L161 106L161 108L158 108L156 107L154 107L152 108L150 109L148 110L147 113L145 114L143 112L142 110L141 108L139 107L137 108L135 108L134 106L132 105L128 104L126 104L123 104L119 103L116 102L114 102L112 102L110 100L108 99L106 99L105 97L102 93L100 91L100 89L99 87L99 85L99 82L100 79L99 77L99 75L101 75L103 76L102 74L107 73L112 73L114 73L119 73L124 73L130 73L135 73L141 73L147 73L151 73ZM44 34L46 34L49 34L52 35L54 35L58 35L61 35L65 35L67 36L69 36L69 43L69 53L71 53L73 53L76 55L79 54L81 55L83 56L86 59L89 61L88 63L85 61L83 58L80 57L77 57L75 56L71 54L67 53L64 53L61 53L58 52L56 52L54 54L52 54L50 55L51 52L53 51L50 52L46 54L46 57L44 57L42 58L39 60L36 61L33 62L30 63L27 63L29 62L32 61L35 60L38 59L40 58L40 56L38 55L36 55L33 56L32 54L29 54L27 53L26 51L27 49L29 48L32 47L34 47L34 45L31 45L29 45L27 45L24 45L21 43L24 43L28 42L33 42L31 41L29 41L26 39L24 38L28 37L30 37L32 35L34 35L37 34L39 34L42 33L44 34ZM438 94L438 92L436 92L434 91L431 89L430 87L427 87L427 85L424 84L421 86L419 87L419 80L424 79L427 80L429 81L430 83L432 82L435 82L438 84L439 87L441 87L443 86L445 85L447 85L445 86L447 87L450 87L448 89L446 88L443 88L442 90L440 90L442 92L441 94L439 94ZM193 139L193 141L193 144L194 142L193 140L195 140L196 138L196 140L198 140L200 141L202 141L205 142L208 141L210 141L208 141L211 142L212 145L214 145L212 146L212 148L212 151L210 153L208 153L206 153L206 156L205 158L203 159L201 158L201 156L199 155L200 153L200 151L200 149L197 149L195 148L192 148L191 146L191 144L190 141L192 140ZM512 122L510 123L508 125L509 128L511 130L514 133L514 136L514 139L511 142L509 143L507 145L507 142L505 141L507 141L509 141L508 139L511 138L511 136L511 133L509 130L507 127L505 126L506 123L503 123L503 121L506 119L508 119L510 119L509 121L512 122ZM414 130L413 132L411 133L408 134L406 135L404 136L402 136L400 137L397 138L397 136L396 134L396 132L397 130L400 129L402 129L404 130L406 128L412 126L414 129ZM376 212L374 214L371 217L369 219L367 220L365 220L362 220L360 220L358 221L356 222L354 221L352 220L352 218L352 216L350 213L349 211L351 210L353 212L355 211L355 204L357 206L357 208L359 207L361 205L363 206L366 205L368 203L370 201L372 199L374 200L376 202L376 205L375 207L376 209L378 208L378 210L376 212ZM378 176L380 179L379 181L379 183L379 185L374 186L374 188L372 188L369 191L367 192L365 192L363 191L361 191L359 189L359 183L363 183L362 181L363 179L365 180L367 181L369 182L371 183L373 184L373 182L371 181L371 179L371 177L371 175L374 175L376 176L378 176ZM375 200L373 199L371 198L369 197L367 194L365 192L367 192L369 191L371 189L374 188L376 189L378 190L378 192L378 195L377 198L375 200Z";
+const WC_CITIES=[
+  {n:"GREENWICH",  tz:"America/New_York",   tag:"HOME"},
+  {n:"LOS ANGELES",tz:"America/Los_Angeles"},
+  {n:"TOKYO",      tz:"Asia/Tokyo"},
+  {n:"LONDON",     tz:"Europe/London"},
+];
+// City marks projected into the same 640x320 equirect space as WORLD_PATH
+const WC_MARKS=[[189,87,1],[110,100,0],[568,97,0],[320,68,0]];  // matches WC_CITIES order
+function worldClockHTML(){
+  const arcs=WC_MARKS.slice(1).map(([x,y])=>
+    `<path d="M189,87 Q${((189+x)/2).toFixed(0)},${(Math.min(87,y)-42).toFixed(0)} ${x},${y}"
+       fill="none" stroke="rgba(255,180,0,.4)" stroke-width="1.3" stroke-dasharray="4 6"/>`).join("");
+  const marks=WC_MARKS.map(([x,y,home],i)=>`
+    <g class="wcm" style="--d:${(i*.55).toFixed(2)}s">
+      <circle cx="${x}" cy="${y}" r="4" fill="${home?"#ffb400":"#4fd7e8"}"/>
+      <circle class="ring" cx="${x}" cy="${y}" r="4" fill="none" stroke-width="1.5"
+        stroke="${home?"#ffb400":"#4fd7e8"}"/>
+    </g>`).join("");
+  return `<div class="wc-stage">
+    <svg class="wc-map" viewBox="0 0 640 320">
+      <path d="${WORLD_PATH}" fill="rgba(52,82,122,.20)" stroke="rgba(110,160,210,.38)" stroke-width="1"/>
+      ${arcs}${marks}
+    </svg>
+    <div class="wc-wrap">${WC_CITIES.map(c=>`
+    <div class="wc" data-tz="${c.tz}">
+      <div class="face"><i class="h"></i><i class="m"></i><i class="s"></i><b></b></div>
+      <div class="time">--:--</div>
+      <div class="city">${c.n}${c.tag?`<span>${c.tag}</span>`:""}</div>
+      <div class="sub"></div>
+    </div>`).join("")}</div></div>`;
+}
+let wcTimer=null;
+function stopWorldClock(){ if(wcTimer){clearInterval(wcTimer);wcTimer=null;} }
+function tickWorldClock(){
+  document.querySelectorAll("#spotBody .wc").forEach(el=>{
+    const now=new Date();
+    const p=Object.fromEntries(new Intl.DateTimeFormat("en-US",
+      {timeZone:el.dataset.tz,hour:"numeric",minute:"2-digit",second:"2-digit",
+       hour12:true,weekday:"short"}).formatToParts(now)
+      .map(x=>[x.type,x.value]));
+    const h=+p.hour, m=+p.minute, s=+p.second;
+    const h24=(p.dayPeriod==="PM")?(h%12)+12:h%12;
+    el.querySelector(".time").textContent=`${h}:${p.minute} ${p.dayPeriod}`;
+    const isDay=h24>=6&&h24<18;
+    el.querySelector(".sub").innerHTML=
+      `${p.weekday.toUpperCase()} · <b class="${isDay?"dnd":"dnn"}">●</b> ${isDay?"DAY":"NIGHT"}`;
+    el.querySelector(".face").classList.toggle("day",h24>=6&&h24<18);
+    el.querySelector("i.h").style.transform=`rotate(${(h%12)*30+m*.5}deg)`;
+    el.querySelector("i.m").style.transform=`rotate(${m*6+s*.1}deg)`;
+    el.querySelector("i.s").style.transform=`rotate(${s*6}deg)`;
+  });
+}
+function startWorldClock(){ stopWorldClock(); tickWorldClock(); wcTimer=setInterval(tickWorldClock,1000); }
+
+/* ══════════════ NIGHT AMBIENT BREAKS ══════════════
+   After every N full page rotations at night, the wall takes a long
+   breather on a moving scene: the volcano loop (if the video file is
+   present), CSS aurora curtains, or the spinning solar system. */
+function volcanoYT(){
+  const id=CFG.nightVideoYT;
+  return `<iframe class="amb-video amb-yt" allow="autoplay; encrypted-media"
+    src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&modestbranding=1&rel=0&iv_load_policy=3&start=2"></iframe>`;
+}
+function volcanoHTML(){
+  // Local file wins (works offline, no player chrome); if it's missing the
+  // video errors and swaps itself for the YouTube embed in place.
+  if(CFG.nightVideo&&!S.volcanoDead)
+    return `<video class="amb-video" src="${CFG.nightVideo}" autoplay muted loop
+      playsinline onerror="S.volcanoDead=1;this.outerHTML=volcanoYT()"></video>`;
+  return volcanoYT();
+}
+function auroraHTML(){
+  return `<div class="amb-aurora"><i></i><i></i><i></i><b></b></div>`;
+}
+const AMB_PLANETS=[  // name, orbit radius vh, size vh, color, period s
+  ["MERCURY",6.5,.9,"#b9a698",7],["VENUS",9.5,1.4,"#e6c78d",11],
+  ["EARTH",12.8,1.5,"#5aa0e0",16],["MARS",16,1.2,"#d97b53",24],
+  ["JUPITER",20,3.2,"#d9a06a",38],["SATURN",24,2.7,"#e0c9a0",52],
+  ["URANUS",27.5,2,"#9fd8de",68],["NEPTUNE",30.5,1.9,"#5a78d9",86]];
+function solarHTML(){
+  return `<div class="amb-solar"><span class="sun"></span>${AMB_PLANETS.map(([n,r,s,c,p])=>`
+    <span class="orb" style="width:${r*2}vh;height:${r*2}vh;animation-duration:${p}s;animation-delay:-${(p*((r*7)%10)/10).toFixed(1)}s">
+      <b style="width:${s}vh;height:${s}vh;background:${c};
+        box-shadow:0 0 ${s*1.5}vh ${c}55${n==="SATURN"?`;outline:.45vh solid ${c}66;outline-offset:.3vh`:""}"></b>
+    </span>
+    <i class="ring" style="width:${r*2}vh;height:${r*2}vh"></i>`).join("")}
+  </div>`;
+}
+const AMBIENT=[
+  {k:"VOLCANO NIGHTS",  b:volcanoHTML, ok:()=>(CFG.nightVideo&&!S.volcanoDead)||CFG.nightVideoYT, dur:300000},
+  {k:"AURORA BOREALIS", b:auroraHTML,  ok:()=>true, dur:150000},
+  {k:"SOLAR SYSTEM",    b:solarHTML,   ok:()=>true, dur:150000},
+];
+let ambIdx=0, ambCycles=0, ambPending=false;
+function isAmbientHours(){
+  const h=new Date().getHours();
+  return h>=CFG.ambientNightStart||h<CFG.ambientNightEnd;
+}
+function showAmbient(){
+  // pick the next available scene
+  for(let t=0;t<AMBIENT.length;t++){
+    const a=AMBIENT[ambIdx%AMBIENT.length]; ambIdx++;
+    if(!a.ok()) continue;
+    stopVestaboard(); stopWorldClock();
+    const body=$("spotBody");
+    $("spotKicker").style.setProperty("--acc","var(--teal)");
+    document.querySelector("#spotKicker .bar").style.background="var(--teal)";
+    decodeKicker(a.k);
+    $("pageBg").className=a.k==="SOLAR SYSTEM"?"bg-space":"bg-stars";
+    body.innerHTML=a.b();
+    $("spotSub").textContent="NIGHT AMBIENT · ROTATION RESUMES SHORTLY";
+    body.classList.remove("fadein");void body.offsetWidth;body.classList.add("fadein");
+    clearTimeout(spotTimer);
+    spotTimer=setTimeout(showSpot,a.dur);
+    return true;
+  }
+  return false;
+}
+
+/* ══════════════ SPOTLIGHT PAGES ══════════════ */
+const spots=[];
+// Hero headline + bulleted list of the next few — used by all news pages.
+function newsPageHTML(items,extra,wm){
+  const hero=items[0];
+  const more=items.slice(1,1+extra);
+  return `<div class="nw-wrap">
+    <div class="nw-hero">${esc(hero.t)}</div>
+    ${more.length?`<div class="nw-list">${more.map(h=>`
+      <div class="nw-item"><span class="b">▸</span><span>${esc(h.t)}</span>
+      ${h.src?`<span class="s">${esc(h.src.toUpperCase())}</span>`:""}</div>`).join("")}</div>`:""}
+  </div>${wm&&WM_SVG[wm]?`<span class="pg-wm">${WM_SVG[wm]}</span>`:""}`;
+}
+function buildSpots(){
+  spots.length=0;
+
+  if(S.natNews[0]) spots.push({k:"TOP STORIES",acc:"var(--blue)",html:true,
+    body:newsPageHTML(S.natNews,3,"news"),
+    sub:(S.natNews[0].src||"").toUpperCase()});
+
+  /* SPORTS — hero + rail of more games incl. upcoming */
+  if(S.games.length){
+    const hero=S.games.find(g=>g.fav)||S.games.find(g=>g.state==="in")||S.games[0];
+    const rest=S.games.filter(g=>g!==hero).slice(0,4);
+    const rail=rest.map(g=>`
+      <div class="mini">
+        ${g.alogo?`<img src="${g.alogo}">`:""}<span>${esc(g.away)}</span>
+        <span class="s">${g.state==="pre"?"":esc(g.as)+"–"+esc(g.hs)}</span>
+        <span>${esc(g.home)}</span>${g.hlogo?`<img src="${g.hlogo}">`:""}
+        ${g.state==="in"?'<span class="live">●LIVE</span>':
+          `<span class="st">${esc(g.state==="pre"?g.det.replace(/^.*- /,""):"FINAL")}</span>`}
+      </div>`).join("");
+    spots.push({k:hero.tag+(hero.state==="in"?" · LIVE":hero.state==="post"?" · FINAL":" · UPCOMING"),
+      acc:hero.state==="in"?"var(--green)":"var(--blue)",html:true,
+      body:`<div class="sp-wrap">
+        <div class="score-row">
+          ${hero.alogo?`<img src="${hero.alogo}">`:""}
+          <span class="ab">${esc(hero.away)}</span>
+          <span class="num">${esc(hero.as||"–")}</span><span class="dash">—</span><span class="num">${esc(hero.hs||"–")}</span>
+          <span class="ab">${esc(hero.home)}</span>
+          ${hero.hlogo?`<img src="${hero.hlogo}">`:""}
+        </div>
+        ${rail?`<div class="sp-rail">${rail}</div>`:""}
+        ${S.sportsNews.length?`<div class="sp-news">${S.sportsNews.slice(0,3).map(h=>`
+          <div class="sp-nw"><span class="b">▸</span><span>${esc(h.t)}</span>
+          ${h.src?`<span class="s">${esc(h.src.toUpperCase())}</span>`:""}</div>`).join("")}
+          <div class="sp-src">SPORTS HEADLINES</div></div>`:""}
+      </div><span class="pg-wm">${WM_SVG.trophy}</span>`,
+      sub:hero.det||""});
+  }
+
+  /* MARKETS — dual chart panels (S&P + PNBK equal billing) + tile strip */
+  if(S.spx||S.pnbk){
+    const fngLbl=S.fng==null?"":S.fng>=75?"EXTREME GREED":S.fng>=55?"GREED":S.fng>=45?"NEUTRAL":S.fng>=25?"FEAR":"EXTREME FEAR";
+    const panel=(label,logo,q,pts,k)=>{
+      if(!q)return "";
+      const col=q.chg>=0?"#4ade5b":"#ff5a5a";
+      const chart=(pts&&pts.length>1)
+        ? sparkSVG(pts,560,120,col)
+        : `<div class="nodata">CHART LOADING…</div>`;
+      return `<div class="mk-panel">
+        <div class="ml">${logo}${label} · ${S.sparkKind[k]||"5-DAY"}</div>
+        <div class="row">
+          <span class="mv ${q.chg>=0?"up":"down"}">${label.startsWith("PNBK")?"$"+q.cur.toFixed(2):q.cur.toLocaleString("en-US",{maximumFractionDigits:0})}</span>
+          <span class="mc ${q.chg>=0?"up":"down"}">${q.chg>=0?"▲":"▼"} ${Math.abs(q.chg).toFixed(2)}%</span>
+        </div>${chart}</div>`;
+    };
+    const pnbkLogoImg=`<img src="${CFG.pnbkLogo}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${CFG.pnbkLogoAlt}'}else{this.style.display='none'}">`;
+    spots.push({k:"MARKETS",acc:"var(--amber)",html:true,
+      body:`<div class="intro intro-candles"><span class="icd">${VEH.candles}</span></div>
+      <div class="mk-wrap">
+        <div class="mk-charts">
+          ${panel("S&P 500","",S.spx,S.sparks.spx,"spx")}
+          ${panel("PNBK · PATRIOT BANK",pnbkLogoImg,S.pnbk,S.sparks.pnbk,"pnbk")}
+        </div>
+        <div class="mk-tiles">
+          ${S.btc?`<div class="mk-tile"><div class="ml">BITCOIN</div><div class="mv ${S.btc.chg>=0?"up":"down"}">$${S.btc.usd.toLocaleString()}</div></div>`:""}
+          ${S.rates.sofr?`<div class="mk-tile"><div class="ml">SOFR</div><div class="mv" style="color:var(--cyan)">${S.rates.sofr}</div></div>`:""}
+          ${S.rates.t10?`<div class="mk-tile"><div class="ml">10-YR</div><div class="mv" style="color:var(--amber)">${S.rates.t10}</div></div>`:""}
+          ${S.fng!=null?`<div class="mk-tile"><div class="ml">FEAR &amp; GREED</div><div class="mv" style="color:var(--purple)">${S.fng}</div></div>`:""}
+        </div>
+      </div>`,
+      sub:fngLbl?("SENTIMENT: "+fngLbl):""});
+  }
+
+  /* FED WATCH — countdown to the next FOMC decision + 2026 calendar */
+  spots.push({k:"FED WATCH",acc:"var(--purple)",html:true,
+    body:fedWatchHTML()+'<span class="pg-wm">'+WM_SVG.bank+'</span>',
+    sub:"FOMC DECISIONS AT 2:00 PM ET · SEP = QUARTERLY PROJECTIONS"});
+
+  /* FLIGHTS radar — only with FRESH data (OpenSky's anonymous tier gets
+     rate-limited on busy shared IPs; a stale radar full of ghost planes is
+     worse than no radar) */
+  if(flightsFresh()) spots.push({k:"FLIGHTS OVER 100 MASON",acc:"var(--cyan)",html:true,dur:16000,
+    body:radarHTML(), sub:""});
+
+  /* BANKING — hero + list */
+  if(S.bankNews[0]) spots.push({k:"BANKING & FINANCE",acc:"var(--green)",html:true,
+    body:newsPageHTML(S.bankNews,3,"bank"),
+    sub:(S.bankNews[0].src||"").toUpperCase()});
+
+  /* WEATHER TODAY — hourly strip + live doppler radar (lunch check) */
+  if(S.hourly.length) spots.push({k:"WEATHER TODAY · DOPPLER",acc:"var(--cyan)",html:true,dur:16000,
+    body:`<div class="wt-stage"><div class="intro intro-storm"><span class="itor">${VEH.tornado}${VEH.reticle}
+      <b class="tlm">CELL TRACK · KOKX DOPPLER · MONITORING</b></span></div>
+    <div class="wt-wrap">
+      <div class="wt-hours">${S.hourly.map(h=>`
+        <div class="wt">
+          <div class="d">${h.h}</div>
+          <div class="e">${h.e}</div>
+          <div class="t">${h.temp}°</div>
+          <div class="p">${h.pp>=15?`<b class="ppd">▮</b>${h.pp}%`:"&nbsp;"}</div>
+        </div>`).join("")}</div>
+      <img class="radar-img" alt="doppler radar"
+        src="https://radar.weather.gov/ridge/standard/KOKX_loop.gif?${Math.floor(Date.now()/600000)}">
+    </div></div>`,
+    sub:"NEXT 10 HOURS · RADAR: NWS KOKX (NY METRO), LIVE LOOP"});
+
+  /* 7-DAY WEATHER */
+  if(S.forecast.length) spots.push({k:"GREENWICH · 7-DAY",acc:"var(--cyan)",html:true,
+    body:`<div class="wk-wrap">${S.forecast.map((d,i)=>`
+      <div class="wk ${i===0?"today":""}">
+        <div class="d">${d.day}</div>
+        <div class="e">${d.emoji}</div>
+        <div class="hi">${d.hi}°</div>
+        <div class="lo">${d.lo}°</div>
+      </div>`).join("")}</div>`, sub:""});
+
+  /* MOON — right after the weather pages */
+  spots.push({k:"MOON PHASE",acc:"var(--amber)",html:true,
+    body:moonPageHTML(), sub:""});
+
+  /* WORLD CLOCK — live analog + digital, home first then west→east */
+  spots.push({k:"WORLD CLOCK",acc:"var(--cyan)",html:true,
+    body:worldClockHTML(), after:startWorldClock, sub:""});
+
+  /* NASA APOD — daily space photo */
+  if(S.apod) spots.push({k:"NASA PICTURE OF THE DAY",acc:"var(--purple)",html:true,
+    body:`<div class="ap-wrap">
+      <img class="ap-img" src="${S.apod.src}" alt="" onerror="this.style.display='none'">
+      <div class="ap-title">${esc(S.apod.title)}</div>
+      <div class="ap-credit">${esc(S.apod.by.toUpperCase())} · ASTRONOMY PICTURE OF THE DAY</div>
+    </div>`, sub:""});
+
+  /* PAINTING OF THE DAY — Art Institute of Chicago, with curator summary */
+  if(S.art) spots.push({k:"PAINTING OF THE DAY",acc:"var(--amber)",html:true,dur:20000,
+    body:`<div class="art-wrap">
+      <img class="art-img" src="${S.art.img}" alt="" onerror="this.style.display='none'">
+      <div class="art-info">
+        <div class="t">${esc(S.art.title)}</div>
+        <div class="a">${esc(S.art.artist)}${S.art.when?" · "+esc(S.art.when):""}</div>
+        ${S.art.desc?`<div class="d">${esc(S.art.desc)}</div>`:""}
+        <div class="c">ART INSTITUTE OF CHICAGO</div>
+      </div>
+    </div>`, sub:""});
+
+  /* LONG ISLAND SOUND — nautical chart with live blinking buoys */
+  spots.push({k:"LONG ISLAND SOUND",acc:"var(--teal)",html:true,
+    body:lisChartHTML(), sub:"BUOYS BLINK AT REAL NOAA FLASH PERIODS · DATA: NDBC 44025"});
+
+  /* COMMUTE — with dark-styled Static Maps minis (office = amber pin) */
+  if(S.traffic){
+    const mapStyle="&style=feature:all%7Celement:geometry%7Ccolor:0x141b28"+
+      "&style=feature:all%7Celement:labels.text.fill%7Ccolor:0x7a8699"+
+      "&style=feature:all%7Celement:labels.text.stroke%7Ccolor:0x0b0f16"+
+      "&style=feature:water%7Celement:geometry%7Ccolor:0x0b1420"+
+      "&style=feature:road%7Celement:geometry%7Ccolor:0x2a3548"+
+      "&style=feature:poi%7Celement:labels%7Cvisibility:off";
+    const miniMap=dest=>`https://maps.googleapis.com/maps/api/staticmap?size=520x260`+
+      `&markers=color:orange%7C${CFG.office.lat},${CFG.office.lon}`+
+      `&markers=color:red%7C${encodeURIComponent(dest)}`+
+      mapStyle+`&key=${CFG.gmapsKey}`;
+    spots.push({k:"DRIVE TIMES FROM OFFICE",acc:"var(--yellow)",html:true,dur:16000,
+      body:`<div class="intro intro-jeep"><span class="ijp">${VEH.jeep}${VEH.reticle}
+        <b class="tlm">ASSET WAGONEER · ETA HOME ${esc(S.traffic.home.toUpperCase())}</b></span></div>
+      <div class="cm-wrap">
+        <div class="cm"><div class="l">HOME</div><div class="v">${esc(S.traffic.home)}</div><div class="n">STAMFORD</div>
+          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(CFG.homeAddr)}"></div>
+        <div class="cm"><div class="l">THE LAKE</div><div class="v">${esc(S.traffic.lake)}</div><div class="n">WALLENPAUPACK</div>
+          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(CFG.lake.lat+","+CFG.lake.lon)}"></div>
+      </div>
+      <div class="cm-road"><span class="cm-anim">${VEH.jeep}</span></div>`,
+      sub:S.traffic.live?"LIVE TRAFFIC · GOOGLE MAPS"
+                              :"TYPICAL DRIVE TIME · NO LIVE TRAFFIC"});
+  }
+
+  /* METRO-NORTH — next scheduled trains to the city */
+  spots.push({k:"METRO-NORTH",acc:"var(--red,#e05252)",html:true,dur:16000,
+    body:trainsHTML(), sub:"NEW HAVEN LINE · SCHEDULED TIMES — CHECK MTA APP FOR DELAYS"});
+
+  /* GREENWICH LOCAL — hero + list */
+  if(S.locNews[0]) spots.push({k:"GREENWICH LOCAL",acc:"var(--teal)",html:true,
+    body:newsPageHTML(S.locNews,3,"bank"),
+    sub:(S.locNews[0].src||"").toUpperCase()});
+
+  /* WORK TO-DO */
+  if(S.tasks.length){
+    const open=S.tasks.filter(t=>!t.done).slice(0,6);
+    const doneN=S.tasks.filter(t=>t.done).length;
+    spots.push({k:"WORK TO-DO",acc:"var(--purple)",html:true,
+      body:`<div class="td-wrap">${open.map(t=>`
+        <div class="td"><span class="box"></span><span>${esc(t.title)}</span>
+        ${t.note?`<span class="note">${esc(t.note)}</span>`:""}</div>`).join("")}</div><span class="pg-wm">${WM_SVG.clipboard}</span>`,
+      sub:open.length+" OPEN · "+doneN+" DONE"});
+  }
+
+  /* WHOOP — recovery ring + stat tiles (hidden until the relay is re-authed) */
+  if(S.whoop){
+    const w=S.whoop, rec=Math.round(w.recovery_score||0);
+    const recCol=rec>=67?"#39d353":rec>=34?"#ffd23f":"#ff4757";
+    const R=150, C=2*Math.PI*R, dash=(rec/100)*C;
+    spots.push({k:"WHOOP RECOVERY",acc:recCol,html:true,
+      body:`<div class="wh-wrap">
+        <div class="wh-ring">
+          <svg viewBox="0 0 340 340">
+            <circle cx="170" cy="170" r="${R}" fill="none" stroke="#1a2030" stroke-width="24"/>
+            <circle cx="170" cy="170" r="${R}" fill="none" stroke="${recCol}" stroke-width="24"
+              stroke-linecap="round" stroke-dasharray="${dash.toFixed(0)} ${C.toFixed(0)}"/>
+          </svg>
+          <div class="pct"><div class="n" style="color:${recCol}">${rec}%</div>
+          <div class="l">RECOVERY</div></div>
+        </div>
+        <div class="wh-tiles">
+          <div class="wh-tile"><div class="l">STRAIN</div><div class="v" style="color:var(--cyan)">${(w.strain||0).toFixed(1)}</div></div>
+          <div class="wh-tile"><div class="l">SLEEP</div><div class="v" style="color:var(--purple)">${Math.round(w.sleep_score||0)}%</div></div>
+          <div class="wh-tile"><div class="l">HRV</div><div class="v" style="color:var(--amber)">${Math.round(w.hrv||0)}<span style="font-size:2.4vh"> MS</span></div></div>
+          <div class="wh-tile"><div class="l">RESTING HR</div><div class="v" style="color:var(--red)">${Math.round(w.rhr||0)}<span style="font-size:2.4vh"> BPM</span></div></div>
+        </div>
+      </div>`,
+      sub:rec>=67?"GREEN — GO GET IT":rec>=34?"YELLOW — PACE YOURSELF":"RED — RECOVERY DAY"});
+  }
+
+  /* THIS DAY IN MARKET HISTORY */
+  const mh=todaysMktHist();
+  if(mh) spots.push({k:"THIS DAY IN MARKET HISTORY",acc:"var(--amber)",html:true,
+    body:`<div class="mh-wrap">
+      <div class="mh-date">${mh.label}</div>
+      <div class="mh-year">${mh.y}</div>
+      <div class="mh-text">${esc(mh.t)}</div>
+    </div><span class="pg-wm">${WM_SVG.chart}</span>`, sub:""});
+
+  /* LEADERSHIP QUOTE — Vestaboard split-flap, rotates every 5 minutes */
+  {
+    const q=QUOTES[Math.floor(Date.now()/(5*60*1000))%QUOTES.length];
+    spots.push({k:"GET IT DONE",acc:"var(--amber)",html:true,
+      body:vestaboardHTML(q), after:animateVestaboard, dur:55000, sub:""});
+  }
+}
+let spotIdx=0;
+// Kicker text decodes in: random glyphs resolve left-to-right (~0.5s)
+let decTimer=null;
+function decodeKicker(txt){
+  clearInterval(decTimer);
+  const el=$("spotKickerTxt"), CH="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#/\\<>_";
+  let n=0;
+  const steps=10;
+  decTimer=setInterval(()=>{
+    n++;
+    el.textContent=txt.split("").map((c,i)=>
+      (c===" "||i<txt.length*n/steps)?c:CH[(Math.random()*CH.length)|0]).join("");
+    if(n>=steps){ el.textContent=txt; clearInterval(decTimer); }
+  },45);
+}
+// Backdrop theme per page — matched on the kicker text
+function bgFor(k){
+  if(/MOON|NASA/.test(k)) return "bg-space";
+  if(/MARKET|FED|BANKING/.test(k)) return "bg-grid";
+  if(/^(MLB|NBA|NHL|NFL|NCAAB|WC|EPL)\b/.test(k)) return "bg-field";
+  if(/GET IT DONE|PAINTING/.test(k)) return "bg-beams";
+  if(/WEATHER|7-DAY/.test(k)) return "bg-sky";
+  if(/LONG ISLAND/.test(k)) return "bg-waves";
+  return "bg-stars";
+}
+function showSpot(){
+  buildSpots();
+  if(!spots.length){   // nothing loaded yet — keep the rotation alive
+    clearTimeout(spotTimer);
+    spotTimer=setTimeout(showSpot,3000);
+    return;
+  }
+  // Night ambient break due? Take it instead of the next page.
+  if(ambPending){
+    ambPending=false; ambCycles=0;
+    if(showAmbient()) return;
+  }
+  stopVestaboard();   // leaving the quote page mid-flip: kill the clack sound
+  stopWorldClock();   // leaving the world clock: stop its 1s tick
+  // 3D hand-off: clone the outgoing page so it falls away behind the new one
+  {
+    const b=$("spotBody");
+    if(b.dataset.shown){
+      const g=b.cloneNode(true);
+      g.removeAttribute("id");
+      g.className="spotGhost";
+      g.style.top=b.offsetTop+"px";
+      g.style.left=b.offsetLeft+"px";
+      g.style.width=b.offsetWidth+"px";
+      b.parentNode.appendChild(g);
+      setTimeout(()=>g.remove(),950);
+    }
+    b.dataset.shown="1";
+  }
+  spotIdx=spotIdx%spots.length;
+  const s=spots[spotIdx];
+  const body=$("spotBody");
+  $("spotKicker").style.setProperty("--acc",s.acc);
+  document.querySelector("#spotKicker .bar").style.background=s.acc;
+  decodeKicker(s.k);                  // scramble→resolve, war-room style
+  $("pageBg").className=bgFor(s.k);   // swap the scene backdrop with the page
+  $("hudTlm").innerHTML="41.0262N 73.6255W · UTC "
+    +new Date().toISOString().slice(11,16)
+    +" · FEED "+(spotIdx+1)+"/"+spots.length+" · SIG <b>NOMINAL</b>";
+  if(s.html)body.innerHTML=s.body; else body.textContent=s.body.replace(/&amp;/g,"&");
+  $("spotSub").textContent=s.sub||"";
+  body.classList.remove("fadein");void body.offsetWidth;body.classList.add("fadein");
+  $("spotDots").innerHTML=spots.map((_,i)=>`<i class="${i===spotIdx?"on":""}"></i>`).join("");
+  if(s.after)s.after();
+  spotIdx++;
+  // Completed a full rotation? Count it toward the next night ambient break.
+  if(spotIdx>=spots.length){
+    ambCycles++;
+    if(isAmbientHours()&&ambCycles>=CFG.ambientEveryCycles) ambPending=true;
+  }
+  // Self-scheduling rotation: pages can override the dwell time (the
+  // Vestaboard quote page holds ~55s so the flaps get their full settle).
+  clearTimeout(spotTimer);
+  spotTimer=setTimeout(showSpot,s.dur||CFG.spotSeconds*1000);
+}
+let spotTimer=null;
+
+/* ══════════════ TICKERS ══════════════ */
+function buildDataTicker(){
+  const seg=[];
+  if(S.spx)seg.push(`<b>S&amp;P</b> <span class="${S.spx.chg>=0?"up":"down"}">${S.spx.cur.toLocaleString("en-US",{maximumFractionDigits:0})} ${S.spx.chg>=0?"▲":"▼"}${Math.abs(S.spx.chg).toFixed(2)}%</span>`);
+  if(S.pnbk)seg.push(`<b>PNBK</b> <span class="${S.pnbk.chg>=0?"up":"down"}">$${S.pnbk.cur.toFixed(2)} ${S.pnbk.chg>=0?"▲":"▼"}${Math.abs(S.pnbk.chg).toFixed(1)}%</span>`);
+  if(S.btc)seg.push(`<b>BTC</b> <span class="${S.btc.chg>=0?"up":"down"}">$${S.btc.usd.toLocaleString()}</span>`);
+  if(S.rates.sofr)seg.push(`<b>SOFR</b> ${S.rates.sofr}`);
+  if(S.rates.t10)seg.push(`<b>10YR</b> ${S.rates.t10}`);
+  if(S.fng!=null)seg.push(`<b>F&amp;G</b> ${S.fng}`);
+  for(const g of S.games.slice(0,6))
+    seg.push(`<b>${esc(g.tag)}</b> ${esc(g.away)} ${esc(g.as)}–${esc(g.hs)} ${esc(g.home)}`+
+      (g.state==="in"?` <span class="up">LIVE</span>`:g.state==="post"?` <span class="src">F</span>`:` <span class="src">${esc(g.det)}</span>`));
+  if(flightsFresh())seg.push(`<b>FLT</b> <span class="cy">${S.flights.length} OVERHEAD</span> nearest ${esc(S.flights[0].cs)} ${S.flights[0].dist.toFixed(0)}mi`);
+  if(S.tides)seg.push(`<b>TIDE</b> ${S.tides}`);
+  if(S.lakeTemp)seg.push(`<b>LAKE</b> <span class="cy">${S.lakeTemp}°</span>`);
+  if(seg.length)$("dataInner").innerHTML=seg.join('<span class="sep">◆</span>');
+}
+function buildNewsTicker(){
+  const seg=[
+    ...S.natNews.slice(0,8),
+    ...S.bankNews.slice(0,3).map(h=>({...h,bank:true})),
+    ...S.locNews.slice(0,3).map(h=>({...h,loc:true})),
+  ];
+  if(!seg.length)return;
+  $("newsInner").innerHTML=seg.map(h=>
+    `<b>${esc((h.bank?"BANKING":h.loc?"GREENWICH":(h.src||"NEWS")).toUpperCase())}:</b> ${esc(h.t)}`)
+    .join('<span class="sep">◆</span>');
+}
+
+/* ══════════════ FETCHERS ══════════════ */
+const wxEmoji=c=>wxSVG(({"01":"sun","02":"partsun","03":"partsun","04":"cloud","09":"rain",
+  "10":"drizzle","11":"storm","13":"snow","50":"fog"})[String(c).slice(0,2)]||"cloud","wxh");
+async function fetchWx(loc,slot){
+  try{
+    const c=await jget(`https://api.openweathermap.org/data/2.5/weather?lat=${loc.lat}&lon=${loc.lon}&units=imperial&appid=${CFG.owmKey}`);
+    $(slot).innerHTML=Math.round(c.main.temp)+"° <span class='e'>"+wxEmoji(c.weather[0].icon)+"</span>";
+  }catch(e){}
+}
+async function fetchHourly(){
+  try{
+    const j=await jget(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.office.lat}&longitude=${CFG.office.lon}&hourly=temperature_2m,precipitation_probability,weathercode&forecast_days=2&temperature_unit=fahrenheit&timezone=America%2FNew_York`);
+    const now=Date.now();
+    const idx=Math.max(0,j.hourly.time.findIndex(t=>new Date(t).getTime()>=now)-1);
+    S.hourly=j.hourly.time.slice(idx,idx+10).map((t,i)=>({
+      h:new Date(t).toLocaleTimeString("en-US",{hour:"numeric"}).replace(" ",""),
+      e:wmoEmoji(j.hourly.weathercode[idx+i]),
+      temp:Math.round(j.hourly.temperature_2m[idx+i]),
+      pp:j.hourly.precipitation_probability[idx+i]||0,
+    }));
+  }catch(e){}
+}
+async function fetchForecast(){
+  try{
+    const j=await jget(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.office.lat}&longitude=${CFG.office.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`);
+    const D=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+    S.forecast=j.daily.time.slice(0,7).map((t,i)=>({
+      day:i===0?"TODAY":D[new Date(t+"T12:00:00").getDay()],
+      emoji:wmoEmoji(j.daily.weathercode[i]),
+      hi:Math.round(j.daily.temperature_2m_max[i]),
+      lo:Math.round(j.daily.temperature_2m_min[i]),
+    }));
+  }catch(e){}
+}
+async function fetchLake(){
+  try{
+    const j=await jget("https://waterservices.usgs.gov/nwis/iv/?format=json&sites=01427510&parameterCd=00010&siteStatus=all");
+    const v=j.value.timeSeries[0]?.values[0]?.value[0]?.value;
+    if(v)S.lakeTemp=(v*9/5+32).toFixed(0);
+  }catch(e){}
+}
+/* ── STOCKS: Yahoo primary, Stooq fallback, last-good cached.
+   Yahoo 429-rate-limits bot-ish IPs (exactly what killed the Markets page);
+   Stooq is keyless CSV and never rate-limits. Successful values persist in
+   localStorage so the Markets page NEVER blanks, even across reboots. ── */
+async function yahooQuote(sym){
+  const u=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=2d`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  const c=j.chart.result[0].indicators.quote[0].close.filter(x=>x!=null);
+  return {cur:c.at(-1),chg:c.length>1?((c.at(-1)-c.at(-2))/c.at(-2))*100:0};
+}
+async function yahooSpark(sym){
+  // 5-day/30-min — returns data on weekends too (range=1d comes back empty)
+  const u=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=30m&range=5d`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  return j.chart.result[0].indicators.quote[0].close.filter(x=>x!=null);
+}
+// FRED daily closes for the S&P (series SP500) — same key + proxy path as
+// the rates, which we know works from the Pi. Returns closes ASCENDING.
+async function fredCloses(){
+  const u=`https://api.stlouisfed.org/fred/series/observations?series_id=SP500&api_key=${CFG.fredKey}&file_type=json&sort_order=desc&limit=14`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  return (j.observations||[])
+    .map(o=>+o.value).filter(x=>x>0).reverse();
+}
+// Alpha Vantage (key from secrets.h; CORS-friendly — direct first, proxy
+// second). Free tier = 25 req/day, so calls are rate-gated below.
+const AV_KEY=(window.SECRETS&&window.SECRETS.avKey)||"";
+async function avGet(params){
+  const u=`https://www.alphavantage.co/query?${params}&apikey=${AV_KEY}`;
+  try{ return await jget(u); }
+  catch(e){ if(PROXY_OK) return await jget(viaProxy(u)); throw e; }
+}
+async function avCloses(sym){               // daily closes → 5-day chart
+  const j=await avGet(`function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=compact`);
+  const ts=j["Time Series (Daily)"]||{};
+  return Object.keys(ts).sort().slice(-12).map(d=>+ts[d]["4. close"]).filter(x=>x>0);
+}
+// Cboe delayed quotes (15-min, keyless) — the only intraday source that works
+// from the Pi: Yahoo 429s the IP and Alpha Vantage free tier is EOD-only
+// (verified: AV "latest trading day" lags to the prior close all session).
+async function cboeQuote(sym){
+  const u=`https://cdn.cboe.com/api/global/delayed_quotes/quotes/${encodeURIComponent(sym)}.json`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  const d=j.data||{};
+  if(!(d.current_price>0)) throw new Error("no cboe quote");
+  return {cur:d.current_price, chg:+d.price_change_percent||0};
+}
+// Cboe minute bars → today's chart (~80 points). Primary spark source: true
+// intraday, same keyless feed as the quotes.
+async function cboeSpark(sym){
+  const u=`https://cdn.cboe.com/api/global/delayed_quotes/charts/intraday/${encodeURIComponent(sym)}.json`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  const rows=(j.data||[]).map(r=>r.price&&r.price.close).filter(x=>x>0);
+  if(rows.length<10) throw new Error("no cboe chart");
+  const step=Math.max(1,Math.floor(rows.length/80));
+  return rows.filter((_,i)=>i%step===0);
+}
+async function avQuote(sym){                // GLOBAL_QUOTE → EOD fallback
+  const j=await avGet(`function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}`);
+  const g=j["Global Quote"]||{};
+  const cur=+g["05. price"], chg=parseFloat(g["10. change percent"]);
+  if(!(cur>0)) throw new Error("no quote");
+  return {cur, chg:isNaN(chg)?0:chg};
+}
+async function getStock(sym,key,fbSeries,fbQuote,ivSpark){
+  let q=null,pts=null,kind=null;
+  // Cboe minute bars first — true intraday, keyless, proxy-friendly
+  if(ivSpark){ try{ pts=await ivSpark(); kind="TODAY"; }catch(e){} }
+  try{ q=await yahooQuote(sym); }catch(e){}
+  if(!pts||pts.length<2){ try{ pts=await yahooSpark(sym); kind="5-DAY"; }catch(e){} }
+  // Quote-specific fallback first (intraday), then series-derived quote
+  if(!q&&fbQuote){ try{ q=await fbQuote(); }catch(e){} }
+  if(!q||!pts||pts.length<2){
+    try{
+      const rows=fbSeries?await fbSeries():[];
+      if(rows.length>=2){
+        if(!q) q={cur:rows.at(-1),chg:((rows.at(-1)-rows.at(-2))/rows.at(-2))*100};
+        if(!pts||pts.length<2){ pts=rows; kind="5-DAY"; }
+      }
+    }catch(e){}
+  }
+  // Daily-close series end at the prior close — append the live quote so the
+  // chart shows today's move too.
+  if(q&&pts&&pts.length>1&&pts.at(-1)!==q.cur) pts=[...pts,q.cur];
+  if(q){ S[key]=q; try{localStorage.setItem("mk_"+key,JSON.stringify(q));}catch(e){} }
+  else { try{S[key]=JSON.parse(localStorage.getItem("mk_"+key))||S[key];}catch(e){} }
+  if(pts&&pts.length>1){ S.sparks[key]=pts; S.sparkKind[key]=kind||"5-DAY";
+    try{localStorage.setItem("mkspark_"+key,JSON.stringify(pts.slice(-80)));
+        localStorage.setItem("mkkind_"+key,S.sparkKind[key]);}catch(e){} }
+  else { try{S.sparks[key]=JSON.parse(localStorage.getItem("mkspark_"+key))||S.sparks[key];
+             S.sparkKind[key]=localStorage.getItem("mkkind_"+key)||S.sparkKind[key];}catch(e){} }
+}
+// Alpha Vantage free tier = 25 calls/day. Budget: intraday GLOBAL_QUOTE for
+// PNBK every 30 min (~13/market-day) + daily-series for the chart hourly
+// only when Yahoo's chart is missing (~1-2/day) — comfortably under the cap.
+let avQLast=0, avSLast=0;
+async function fetchMarkets(){
+  await getStock("^GSPC","spx",fredCloses,()=>cboeQuote("_SPX"),()=>cboeSpark("_SPX"));
+  const qOK=Date.now()-avQLast>30*60*1000;
+  const sOK=Date.now()-avSLast>60*60*1000;
+  await getStock("PNBK","pnbk",
+    sOK?()=>{avSLast=Date.now();return avCloses("PNBK");}:async()=>[],
+    async()=>{ // Cboe intraday first; AV (EOD, 25/day cap) only as backstop
+      try{ return await cboeQuote("PNBK"); }
+      catch(e){ if(qOK){avQLast=Date.now();return avQuote("PNBK");} throw e; }
+    },
+    ()=>cboeSpark("PNBK"));
+  try{const b=await jget("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true");
+    S.btc={usd:b.bitcoin.usd,chg:b.bitcoin.usd_24h_change};}catch(e){}
+  try{const f=await jget("https://api.alternative.me/fng/?limit=1");S.fng=+f.data[0].value;}catch(e){}
+  buildDataTicker();
+}
+async function fredSeries(id){
+  const u=`https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${CFG.fredKey}&file_type=json&sort_order=desc&limit=1`;
+  const j=await jget(PROXY_OK?viaProxy(u):u);
+  const v=j.observations?.[0]?.value;
+  return (v&&v!==".")?(+v).toFixed(2)+"%":null;
+}
+async function fetchRates(){
+  if(!PROXY_OK)return;
+  try{S.rates.sofr=await fredSeries("SOFR");S.rates.t10=await fredSeries("DGS10");}catch(e){}
+  buildDataTicker();
+}
+async function fetchScores(){
+  const leagues=[["MLB","baseball/mlb"],["NBA","basketball/nba"],["NHL","hockey/nhl"],
+                 ["NFL","football/nfl"],["WC","soccer/fifa.world"]];
+  const games=[];
+  for(const [tag,path] of leagues){
+    try{
+      const j=await jget(`https://site.api.espn.com/apis/site/v2/sports/${path}/scoreboard`);
+      const todayET=new Date().toLocaleDateString("en-US",{timeZone:"America/New_York"});
+      for(const ev of (j.events||[])){
+        const c=ev.competitions?.[0];if(!c)continue;
+        // TODAY ONLY — drops out-of-season leagues (July NFL shows August
+        // preseason games) and keeps the board focused on live action.
+        if(ev.date&&new Date(ev.date).toLocaleDateString("en-US",{timeZone:"America/New_York"})!==todayET)continue;
+        const comp=Object.fromEntries(c.competitors.map(x=>[x.homeAway,x]));
+        games.push({tag,
+          away:comp.away?.team?.abbreviation||"?",home:comp.home?.team?.abbreviation||"?",
+          alogo:comp.away?.team?.logo||"",hlogo:comp.home?.team?.logo||"",
+          as:comp.away?.score||"",hs:comp.home?.score||"",
+          state:c.status?.type?.state,det:c.status?.type?.shortDetail||""});
+      }
+    }catch(e){}
+  }
+  const isFav=g=>CFG.favorites.includes(g.away)||CFG.favorites.includes(g.home);
+  games.forEach(g=>g.fav=isFav(g));
+  games.sort((a,b)=>((b.fav?1000:0)+(b.state==="in"?100:0)+(b.state==="post"?50:0)+(b.state==="pre"?10:0))
+                   -((a.fav?1000:0)+(a.state==="in"?100:0)+(a.state==="post"?50:0)+(a.state==="pre"?10:0)));
+  S.games=games;
+  buildDataTicker();
+}
+async function fetchBuoy(){
+  // NDBC 44025 (central LIS approaches) realtime feed — fixed-width text.
+  // Row format: YY MM DD hh mm WDIR WSPD GST WVHT DPD APD MWD PRES ATMP WTMP …
+  if(!PROXY_OK)return;
+  try{
+    const t=await tget(viaProxy("https://www.ndbc.noaa.gov/data/realtime2/44025.txt"));
+    const row=t.split("\n").find(l=>l&&!l.startsWith("#"));
+    if(!row)return;
+    const c=row.trim().split(/\s+/);
+    const wvht=parseFloat(c[8]), wtmp=parseFloat(c[14]);
+    S.buoy={
+      waveFt:isNaN(wvht)?null:(wvht*3.281).toFixed(1),
+      waterF:isNaN(wtmp)?null:Math.round(wtmp*9/5+32),
+    };
+    buildDataTicker();
+  }catch(e){}
+}
+async function fetchTides(){
+  try{
+    const f=d=>d.toISOString().slice(0,10).replace(/-/g,"");
+    const j=await jget(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=dewsfeed&begin_date=${f(new Date())}&end_date=${f(new Date(Date.now()+2*86400000))}&datum=MLLW&station=8467150&time_zone=lst_ldt&units=english&interval=hilo&format=json`);
+    const next=(j.predictions||[]).find(p=>new Date(p.t)>Date.now());
+    if(next)S.tides=(next.type==="H"?"HIGH ":"LOW ")+
+      new Date(next.t).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  }catch(e){}
+  buildDataTicker();
+}
+async function fetchTraffic(){
+  if(!PROXY_OK)return;
+  const gm=async dest=>{
+    const u=`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(CFG.office.addr)}&destinations=${encodeURIComponent(dest)}&departure_time=now&key=${CFG.gmapsKey}`;
+    const j=await jget(viaProxy(u));
+    const el=j.rows?.[0]?.elements?.[0];
+    // Key is IP-restricted and REQUEST_DENIEDs the office network — throw so
+    // the OSRM fallback below kicks in instead of rendering an empty page.
+    if(j.status!=="OK"||!el||el.status!=="OK") throw new Error(j.error_message||"dm fail");
+    return ((el.duration_in_traffic||el.duration).text)
+      .replace(" mins","m").replace(" min","m").replace(" hours","h").replace(" hour","h");
+  };
+  // Keyless fallback: OSRM public router — typical (no-traffic) drive time.
+  const osrm=async(lat,lon)=>{
+    const u=`https://router.project-osrm.org/route/v1/driving/${CFG.office.lon},${CFG.office.lat};${lon},${lat}?overview=false`;
+    const j=await jget(viaProxy(u));
+    const s=j.routes?.[0]?.duration;
+    if(!s)throw new Error("osrm fail");
+    const m=Math.round(s/60);
+    return m>=60?Math.floor(m/60)+"h "+(m%60)+"m":m+"m";
+  };
+  try{
+    S.traffic={home:await gm(CFG.homeAddr), lake:await gm(CFG.lake.addr), live:true};
+  }catch(e){
+    try{S.traffic={home:await osrm(CFG.home.lat,CFG.home.lon),
+                   lake:await osrm(CFG.lake.lat,CFG.lake.lon), live:false};}catch(e2){}
+  }
+}
+function rssTitles(xml,limit){
+  const doc=new DOMParser().parseFromString(xml,"text/xml");
+  return [...doc.querySelectorAll("item")].slice(0,limit).map(it=>{
+    let t=it.querySelector("title")?.textContent||"";
+    const dash=t.lastIndexOf(" - ");
+    const src=dash>10?t.slice(dash+3):"";
+    if(dash>10)t=t.slice(0,dash);
+    return {t,src};
+  });
+}
+async function fetchNews(){
+  if(!PROXY_OK)return;
+  try{S.natNews=rssTitles(await tget(viaProxy("https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en")),12);}catch(e){}
+  try{S.locNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/search?q=%22Greenwich%22%20Connecticut&hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
+  try{S.bankNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/search?q=banking%20OR%20%22regional%20banks%22%20OR%20%22Federal%20Reserve%22&hl=en-US&gl=US&ceid=US:en")),6);}catch(e){}
+  // Google News sports topic — ESPN's own RSS soft-blocks the proxy (200, empty body)
+  try{S.sportsNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en")),4);}catch(e){}
+  buildNewsTicker();
+  checkBreaking();
+}
+async function fetchTasks(){
+  if(!PROXY_OK)return;
+  // ToDew live sync — WORK CATEGORY ONLY. This is an office screen: personal
+  // categories (health, finance, home) must never render here. The category
+  // filter is a hard privacy rule, not a display preference.
+  if(CFG.todewToken){
+    try{
+      const r=await fetch(viaProxy("https://todew.dewitt-bf3.workers.dev/api/sync"),
+        {headers:{Authorization:"Bearer "+CFG.todewToken}});
+      const j=await r.json();
+      if(Array.isArray(j.tasks)){
+        const pw={urgent:0,high:1,normal:2};
+        const live=j.tasks
+          .filter(t=>t.category==="Work"&&!t.completed&&t.type!=="routine")
+          .sort((a,b)=>(pw[a.priority]??2)-(pw[b.priority]??2)
+            ||String(a.due||"9999").localeCompare(String(b.due||"9999")))
+          .map(t=>({done:false,title:t.title,
+            note:[t.priority==="urgent"?"URGENT":t.priority==="high"?"HIGH":"",
+                  t.due?"DUE "+t.due.slice(5).replace("-","/"):""]
+                 .filter(Boolean).join(" · ")}));
+        if(live.length){S.tasks=live;return;}
+      }
+    }catch(e){}
+  }
+  try{
+    const md=await tget(CFG.proxy+"/tasks");
+    S.tasks=md.split("\n")
+      .map(l=>l.match(/^\s*-\s*\[([ xX])\]\s*(.+)$/))
+      .filter(Boolean)
+      .map(m=>{
+        let raw=m[2].replace(/\*\*/g,"").trim();
+        const di=raw.indexOf(" - ");
+        return {done:m[1].toLowerCase()==="x",
+          title:di>0?raw.slice(0,di):raw,
+          note:di>0?raw.slice(di+3):""};
+      });
+  }catch(e){}
+}
+
+/* ══════════════ BOOT ══════════════ */
+(async function boot(){
+  try{
+    await fetch(CFG.proxy+"/ping",{signal:AbortSignal.timeout(1500)});
+    PROXY_OK=true;$("proxyDot").className="ok";
+  }catch(e){$("proxyDot").className="warn";}
+  const every=(fn,ms)=>{fn();setInterval(fn,ms)};
+  every(()=>fetchWx(CFG.office,"wx1V"),10*60*1000);
+  every(()=>fetchWx(CFG.lake,"wx2V"),10*60*1000);
+  every(fetchForecast,60*60*1000);
+  every(fetchLake,60*60*1000);
+  every(fetchMarkets,10*60*1000);   // 10 min — gentler on Yahoo's rate limiter
+  every(fetchHourly,30*60*1000);
+  every(fetchRates,60*60*1000);
+  every(fetchScores,2*60*1000);
+  every(fetchTides,30*60*1000);
+  every(fetchBuoy,30*60*1000);
+  every(fetchTraffic,10*60*1000);
+  every(fetchNews,10*60*1000);
+  every(fetchFlights,10*60*1000);  // 10 min — OpenSky anonymous credits are
+                                   // finite per IP; 5-min polls exhausted
+                                   // them by afternoon on a shared office IP
+  every(fetchTasks,5*60*1000);
+  every(fetchApod,6*60*60*1000);   // daily image; DEMO_KEY budget is ample at 4/day
+  every(fetchArt,6*60*60*1000);    // daily painting; AIC API is unmetered
+  every(fetchWhoop,30*60*1000);
+  every(fetchAlerts,5*60*1000);
+  setTimeout(showSpot,1200);
+
+  if(location.hash==="#testwarn")
+    takeover("nws","SEVERE THUNDERSTORM WARNING",
+      "Severe Thunderstorm Warning for Fairfield County until 8:45 PM",
+      "FAIRFIELD COUNTY CT · NATIONAL WEATHER SERVICE",20);
+  if(location.hash==="#testbreak")
+    takeover("breaking","● BREAKING NEWS",
+      "Example breaking headline takes over the entire display",
+      "ASSOCIATED PRESS",15);
+  if(location.hash==="#testquote")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="GET IT DONE"));
+      showSpot();},1500);
+  if(location.hash==="#testclock")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WORLD CLOCK"));
+      showSpot();},1500);
+  if(location.hash==="#testtrains")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="METRO-NORTH"));
+      showSpot();},1500);
+  if(location.hash==="#testlis")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="LONG ISLAND SOUND"));
+      showSpot();},1500);
+  if(location.hash==="#testart")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="PAINTING OF THE DAY"));
+      showSpot();},2500);
+  if(location.hash==="#testvolcano") setTimeout(()=>{ambIdx=0;showAmbient();},1500);
+  if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=1;showAmbient();},1500);
+  if(location.hash==="#testsolar")   setTimeout(()=>{ambIdx=2;showAmbient();},1500);
+})();
+</script>
+</body>
+</html>
