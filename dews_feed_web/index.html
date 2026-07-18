@@ -742,6 +742,10 @@
   .lis-info .v{font-size:6vh;font-weight:800;color:var(--cyan);
                font-variant-numeric:tabular-nums;line-height:1.15}
   .lis-info .v.gold{color:var(--amber)}
+  .lis-info .bt{font-size:2vh;letter-spacing:.18em;margin-left:1vw;vertical-align:middle}
+  .lis-info .bt.up{color:#4ade5b}
+  .lis-info .bt.dn{color:#ffb400}
+  .lis-info .bt.st{color:var(--ink-faint)}
 
   /* ── WEATHER TODAY: hourly grid + doppler ── */
   .wt-wrap{display:flex;gap:2.5vw;align-items:center}
@@ -1465,6 +1469,14 @@ function lisChartHTML(){
         <div class="v">${S.buoy&&S.buoy.waveFt?S.buoy.waveFt+" FT":"—"}</div></div>
       <div class="row"><div class="l">WATER</div>
         <div class="v">${S.buoy&&S.buoy.waterF?S.buoy.waterF+"°F":"—"}</div></div>
+      <div class="row"><div class="l">BAROMETER</div>
+        <div class="v" style="color:#9fb8d8">${S.buoy&&S.buoy.presInHg?S.buoy.presInHg
+          +(S.buoy.presTrend==null?"":S.buoy.presTrend>=1
+            ?'<span class="bt up">▲ RISING</span>'
+            :S.buoy.presTrend<=-1
+            ?'<span class="bt dn">▼ FALLING</span>'
+            :'<span class="bt st">→ STEADY</span>')
+          :"—"}</div></div>
       <div class="row"><div class="l">NEXT TIDE · STAMFORD</div>
         <div class="v gold">${S.tides||"—"}</div></div>
     </div>`;
@@ -2433,13 +2445,29 @@ async function fetchBuoy(){
   if(!PROXY_OK)return;
   try{
     const t=await tget(viaProxy("https://www.ndbc.noaa.gov/data/realtime2/44025.txt"));
-    const row=t.split("\n").find(l=>l&&!l.startsWith("#"));
-    if(!row)return;
-    const c=row.trim().split(/\s+/);
-    const wvht=parseFloat(c[8]), wtmp=parseFloat(c[14]);
+    const rows=t.split("\n").filter(l=>l&&!l.startsWith("#"));
+    if(!rows.length)return;
+    const c=rows[0].trim().split(/\s+/);
+    const wvht=parseFloat(c[8]), wtmp=parseFloat(c[14]), pres=parseFloat(c[12]);
+    // Barometric tendency: compare against the reading ~3 hours back (the
+    // feed carries weeks of history). NWS convention: ±1 hPa/3h = steady.
+    let trend=null;
+    if(!isNaN(pres)){
+      const t0=Date.UTC(+c[0],+c[1]-1,+c[2],+c[3],+c[4]);
+      for(const r of rows.slice(1)){
+        const d=r.trim().split(/\s+/);
+        if(t0-Date.UTC(+d[0],+d[1]-1,+d[2],+d[3],+d[4])>=3*3600*1000){
+          const p=parseFloat(d[12]);
+          if(!isNaN(p)) trend=pres-p;
+          break;
+        }
+      }
+    }
     S.buoy={
       waveFt:isNaN(wvht)?null:(wvht*3.281).toFixed(1),
       waterF:isNaN(wtmp)?null:Math.round(wtmp*9/5+32),
+      presInHg:isNaN(pres)?null:(pres*0.02953).toFixed(2),
+      presTrend:trend,
     };
     buildDataTicker();
   }catch(e){}
