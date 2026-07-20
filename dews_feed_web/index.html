@@ -414,11 +414,10 @@
     animation:twinkle 5.5s ease-in-out infinite alternate-reverse}
   @keyframes twinkle{from{opacity:.14}to{opacity:.5}}
 
-  /* 3D hand-off: outgoing page falls away behind the incoming one */
-  .spotGhost{position:absolute;z-index:0;pointer-events:none;overflow:hidden;
-    font-weight:700;font-size:7.2vh;line-height:1.14;max-width:92vw;
-    letter-spacing:-.01em;transform-style:preserve-3d;
-    animation:pageOut .85s cubic-bezier(.55,0,.85,.36) both}
+  /* outro phase: the live page falls away into depth BEFORE the next page
+     swaps in — the two never overlap */
+  #spotBody.spotOut{animation:pageOut .42s cubic-bezier(.55,0,.85,.36) both;
+    transform-style:preserve-3d}
   @keyframes pageOut{to{opacity:0;transform:translateY(-6vh) translateZ(-420px) rotateX(-15deg)}}
 
   /* extruded 3D type on the hero numerals */
@@ -595,6 +594,46 @@
   .tr-anim{position:absolute;bottom:1.9vh;left:0;font-size:6.4vh;line-height:1;
     white-space:nowrap;animation:trainRun 13s linear infinite}
   @keyframes trainRun{from{transform:translateX(88vw)}to{transform:translateX(-60vw)}}
+
+  /* ── TITLE IDENT — 3D warp-tunnel station ident, opens every cycle ── */
+  .ti-stage{position:relative;height:58vh;perspective:900px;transform-style:preserve-3d;
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ti-tunnel{position:absolute;inset:0;pointer-events:none}
+  .ti-tunnel i{position:absolute;left:50%;top:46%;width:30vh;height:30vh;
+    border-radius:50%;border:2px solid;transform:translate(-50%,-50%) scale(.05);
+    animation:tiWarp 3.2s linear infinite}
+  .ti-tunnel i:nth-child(1){border-color:rgba(255,180,0,.7)}
+  .ti-tunnel i:nth-child(2){border-color:rgba(38,208,224,.7);animation-delay:-.64s}
+  .ti-tunnel i:nth-child(3){border-color:rgba(190,90,255,.7);animation-delay:-1.28s}
+  .ti-tunnel i:nth-child(4){border-color:rgba(57,211,131,.7);animation-delay:-1.92s}
+  .ti-tunnel i:nth-child(5){border-color:rgba(255,90,120,.7);animation-delay:-2.56s}
+  @keyframes tiWarp{from{transform:translate(-50%,-50%) scale(.04);opacity:0}
+    18%{opacity:.75}to{transform:translate(-50%,-50%) scale(3.1);opacity:0}}
+  .ti-word{position:relative;transform-style:preserve-3d;line-height:1;
+    font-weight:800;font-size:12.5vh;letter-spacing:.02em;white-space:nowrap}
+  .ti-word .sp{display:inline-block;width:4vw}
+  .ti-l{display:inline-block;color:#f4f7ff;
+    text-shadow:.35vh 0 0 rgba(255,60,90,.55),-.35vh 0 0 rgba(40,220,255,.55),
+      0 0 3vh rgba(255,180,0,.6);
+    animation:tiIn .9s calc(var(--i)*.07s) cubic-bezier(.2,.8,.25,1.1) both,
+      tiFloat 4.5s ease-in-out calc(var(--i)*-.4s + 1.6s) infinite alternate,
+      tiGlow 7s linear calc(var(--i)*-.6s) infinite}
+  @keyframes tiIn{from{opacity:0;transform:translateZ(-650px) rotateY(80deg) translateY(-9vh)}
+    to{opacity:1;transform:none}}
+  @keyframes tiFloat{from{transform:translateZ(-35px) rotateY(-9deg) translateY(.5vh)}
+    to{transform:translateZ(35px) rotateY(9deg) translateY(-.5vh)}}
+  @keyframes tiGlow{
+    0%,100%{text-shadow:.35vh 0 0 rgba(255,60,90,.55),-.35vh 0 0 rgba(40,220,255,.55),0 0 3.2vh rgba(255,180,0,.75)}
+    33%{text-shadow:.35vh 0 0 rgba(255,60,90,.55),-.35vh 0 0 rgba(40,220,255,.55),0 0 3.2vh rgba(38,208,224,.75)}
+    66%{text-shadow:.35vh 0 0 rgba(255,60,90,.55),-.35vh 0 0 rgba(40,220,255,.55),0 0 3.2vh rgba(190,90,255,.75)}}
+  .ti-sub{font-family:var(--mono);font-size:2.6vh;letter-spacing:.5em;
+    color:var(--ink-dim);margin-top:4vh;white-space:nowrap;overflow:hidden;
+    width:0;border-right:2px solid var(--amber);
+    animation:tiType 1.6s steps(34) 1.4s forwards}
+  @keyframes tiType{to{width:100%}}
+  .ti-ver{font-family:var(--mono);font-size:1.8vh;letter-spacing:.3em;
+    color:var(--ink-faint);margin-top:1.6vh;opacity:0;animation:tiFade .6s 3.2s forwards}
+  @keyframes tiFade{to{opacity:1}}
 
   /* ── NIGHT AMBIENT SCENES — explicit stage heights: these scenes are all
      absolute-positioned art, and spotBody has no natural height ── */
@@ -1826,6 +1865,21 @@ function tickWorldClock(){
 }
 function startWorldClock(){ stopWorldClock(); tickWorldClock(); wcTimer=setInterval(tickWorldClock,1000); }
 
+/* ══════════════ TITLE IDENT ══════════════
+   Station ident: warp tunnel + letters flying in from deep Z, floating as a
+   3D ribbon with chromatic-split hue-cycling glow. Opens every cycle. */
+function titleHTML(){
+  const word="THE DEWS FEED";
+  return `<div class="ti-stage">
+    <div class="ti-tunnel"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="ti-word">${word.split("").map((ch,i)=>
+      ch===" "?'<span class="sp"></span>'
+      :`<span class="ti-l" style="--i:${i}">${ch}</span>`).join("")}</div>
+    <div class="ti-sub">GLOBAL MONITORING · GREENWICH CT</div>
+    <div class="ti-ver">SIG NOMINAL · ALL SYSTEMS GREEN</div>
+  </div>`;
+}
+
 /* ══════════════ NIGHT AMBIENT BREAKS ══════════════
    After every N full page rotations at night, the wall takes a long
    breather on a moving scene: the volcano loop (if the video file is
@@ -1906,6 +1960,10 @@ function newsPageHTML(items,extra,wm){
 }
 function buildSpots(){
   spots.length=0;
+
+  /* STATION IDENT — every rotation opens with the title card */
+  spots.push({k:"SIGNAL ACQUIRED",acc:"var(--amber)",html:true,dur:9000,
+    body:titleHTML(), sub:""});
 
   if(S.natNews[0]) spots.push({k:"TOP STORIES",acc:"var(--blue)",html:true,
     body:newsPageHTML(S.natNews,3,"news"),
@@ -2156,7 +2214,7 @@ function decodeKicker(txt){
 }
 // Backdrop theme per page — matched on the kicker text
 function bgFor(k){
-  if(/MOON|NASA/.test(k)) return "bg-space";
+  if(/MOON|NASA|SIGNAL/.test(k)) return "bg-space";
   if(/MARKET|FED|BANKING/.test(k)) return "bg-grid";
   if(/^(MLB|NBA|NHL|NFL|NCAAB|WC|EPL)\b/.test(k)) return "bg-field";
   if(/GET IT DONE|PAINTING/.test(k)) return "bg-beams";
@@ -2171,28 +2229,30 @@ function showSpot(){
     spotTimer=setTimeout(showSpot,3000);
     return;
   }
+  // Clean two-phase transition: the current page fully animates OUT first,
+  // then the next one swaps in and animates IN — never both at once.
+  const bodyEl=$("spotBody");
+  if(bodyEl.dataset.shown&&!transPending){
+    transPending=true;
+    stopVestaboard();   // leaving the quote page mid-flip: kill the clack sound
+    stopWorldClock();   // leaving the world clock: stop its 1s tick
+    bodyEl.classList.remove("fadein");
+    void bodyEl.offsetWidth;
+    bodyEl.classList.add("spotOut");
+    clearTimeout(spotTimer);
+    spotTimer=setTimeout(showSpot,470);   // outro length + a beat of black
+    return;
+  }
+  transPending=false;
+  bodyEl.classList.remove("spotOut");
+  bodyEl.dataset.shown="1";
   // Night ambient break due? Take it instead of the next page.
   if(ambPending){
     ambPending=false; ambCycles=0;
     if(showAmbient()) return;
   }
-  stopVestaboard();   // leaving the quote page mid-flip: kill the clack sound
-  stopWorldClock();   // leaving the world clock: stop its 1s tick
-  // 3D hand-off: clone the outgoing page so it falls away behind the new one
-  {
-    const b=$("spotBody");
-    if(b.dataset.shown){
-      const g=b.cloneNode(true);
-      g.removeAttribute("id");
-      g.className="spotGhost";
-      g.style.top=b.offsetTop+"px";
-      g.style.left=b.offsetLeft+"px";
-      g.style.width=b.offsetWidth+"px";
-      b.parentNode.appendChild(g);
-      setTimeout(()=>g.remove(),950);
-    }
-    b.dataset.shown="1";
-  }
+  stopVestaboard();
+  stopWorldClock();
   spotIdx=spotIdx%spots.length;
   const s=spots[spotIdx];
   const body=$("spotBody");
@@ -2220,6 +2280,7 @@ function showSpot(){
   spotTimer=setTimeout(showSpot,s.dur||CFG.spotSeconds*1000);
 }
 let spotTimer=null;
+let transPending=false;   // true while the outro phase is playing
 
 /* ══════════════ TICKERS ══════════════ */
 function buildDataTicker(){
@@ -2630,6 +2691,8 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="PAINTING OF THE DAY"));
       showSpot();},2500);
+  if(location.hash==="#testtitle")
+    setTimeout(()=>{buildSpots();spotIdx=0;showSpot();},1500);
   if(location.hash==="#testvolcano") setTimeout(()=>{ambIdx=0;showAmbient();},1500);
   if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=1;showAmbient();},1500);
   if(location.hash==="#testsolar")   setTimeout(()=>{ambIdx=2;showAmbient();},1500);
