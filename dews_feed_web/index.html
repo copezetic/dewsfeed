@@ -779,6 +779,37 @@
   @keyframes orbSpin{from{transform:translate(-50%,-50%) rotate(0)}
                      to{transform:translate(-50%,-50%) rotate(360deg)}}
 
+  /* ── EARTHQUAKE WATCH ── */
+  .qk-map .ring{transform-box:fill-box;transform-origin:center;
+    animation:wcPing 2.2s ease-out infinite;animation-delay:var(--d,0s)}
+  .qk-info{position:relative;z-index:1;margin-left:2vw;max-width:34vw;
+    font-family:var(--mono)}
+  .qk-info .l{font-size:2.2vh;letter-spacing:.25em;color:var(--ink-dim)}
+  .qk-info .v{font-size:11vh;font-weight:800;color:#ff4757;line-height:1.05;
+    text-shadow:0 0 3vh rgba(255,71,87,.35)}
+  .qk-info .p{font-size:2.6vh;color:var(--ink);margin-top:1vh;line-height:1.5}
+  .qk-info .n{font-size:2.1vh;color:var(--ink-faint);margin-top:2vh;letter-spacing:.15em}
+
+  /* ── AURORA WATCH ── */
+  .kp-wrap{display:flex;align-items:center;gap:5vw}
+  .kp-gauge{width:44vh;height:auto}
+  .kp-info .v{font-family:var(--mono);font-size:12vh;font-weight:800;line-height:1}
+  .kp-info .s{font-family:var(--mono);font-size:3.4vh;letter-spacing:.2em;margin-top:1vh}
+  .kp-info .p{font-size:3vh;font-weight:600;color:var(--ink);margin-top:2.4vh}
+
+  /* ── STANDINGS ── */
+  .st-wrap{display:flex;gap:6vw}
+  .st-col{font-family:var(--mono)}
+  .st-h{font-size:3vh;letter-spacing:.3em;color:var(--ink-dim);margin-bottom:1.8vh}
+  .st-r{display:flex;gap:1.6vw;align-items:baseline;font-size:4.4vh;font-weight:700;
+    padding:.5vh 0}
+  .st-r.fav .tm{color:var(--amber)}
+  .st-r .rk{font-size:2.4vh;color:var(--ink-faint);width:2ch}
+  .st-r .tm{width:5ch}
+  .st-r .wl{color:var(--cyan);font-variant-numeric:tabular-nums}
+  .st-r .gb{font-size:2.8vh;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+  .st-f{font-size:1.9vh;color:var(--ink-faint);letter-spacing:.2em;margin-top:1.4vh}
+
   /* ── WORLD CLOCK — clocks over a live world map with pinging city marks ── */
   .wc-stage{position:relative}
   .wc-map{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
@@ -1056,7 +1087,8 @@ const viaProxy=u=>CFG.proxy+"/p?u="+encodeURIComponent(u);
 const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{},
           games:[], natNews:[], locNews:[], bankNews:[], sportsNews:[], traffic:null,
           tides:null, lakeTemp:null, flights:[], forecast:[], hourly:[],
-          buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null };
+          buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null,
+          quakes:[], kp:null, alEast:null, afcEast:null };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -1098,6 +1130,24 @@ let alertTimer=null, activeWarning=null;
 /* Alert chime — synthesized with WebAudio, no sound files needed. Plays out
    the Pi's HDMI audio (monitor speakers) or 3.5mm jack. Kiosk launches with
    autoplay allowed, so no user gesture is required on the Pi. */
+// Ship's bell: two soft mellow tones at the top of the hour
+function bellChime(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==="suspended")ctx.resume();
+    const t0=ctx.currentTime;
+    [[880,0,.9],[660,.55,1.4]].forEach(([f,st,d])=>{
+      const o=ctx.createOscillator(),v=ctx.createGain();
+      o.type="sine";o.frequency.value=f;
+      v.gain.setValueAtTime(.0001,t0+st);
+      v.gain.linearRampToValueAtTime(.12,t0+st+.03);
+      v.gain.exponentialRampToValueAtTime(.0001,t0+st+d);
+      o.connect(v);v.connect(ctx.destination);
+      o.start(t0+st);o.stop(t0+st+d+.1);
+    });
+    setTimeout(()=>ctx.close(),3000);
+  }catch(e){}
+}
 function chime(kind){
   try{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -1718,11 +1768,14 @@ function vbLines(text,cols){
   if(cur)lines.push(cur);
   return lines;
 }
-function vestaboardHTML(q){
+function vestaboardHTML(q,plain){
   // Real Vestaboard geometry: 22 columns. Rows grow with the quote (min 6
   // like the real board, blank rows pad top/bottom so the text sits centered).
+  // plain=true skips the quote marks / author dash (word-of-the-day mode).
   const cols=22;
-  const rowsRaw=[...vbLines('"'+q.q+'"',cols),"",...vbLines("- "+q.a,cols)];
+  const rowsRaw=plain
+    ?[...vbLines(q.q,cols),"",...vbLines(q.a,cols)]
+    :[...vbLines('"'+q.q+'"',cols),"",...vbLines("- "+q.a,cols)];
   while(rowsRaw.length<5) rowsRaw.length%2?rowsRaw.push(""):rowsRaw.unshift("");
   const rows=rowsRaw.map(l=>{
     const pad=Math.floor((cols-l.length)/2);
@@ -1890,6 +1943,86 @@ async function fetchArt(){
     }
   }catch(e){}
 }
+
+/* ══════════════ EARTHQUAKE WATCH (USGS, keyless) ══════════════ */
+async function fetchQuakes(){
+  try{
+    const u="https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+    let j=null;
+    try{ j=await jget(u); }catch(e){ if(PROXY_OK) j=await jget(viaProxy(u)); }
+    S.quakes=(j.features||[]).map(f=>({
+      mag:f.properties.mag, place:f.properties.place||"",
+      time:f.properties.time, lon:f.geometry.coordinates[0],
+      lat:f.geometry.coordinates[1],
+    })).filter(q=>q.mag>=2.5).sort((a,b)=>b.mag-a.mag).slice(0,40);
+  }catch(e){}
+}
+
+/* ══════════════ AURORA / SPACE WEATHER (NOAA SWPC, keyless) ══════════════ */
+async function fetchKp(){
+  try{
+    const u="https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
+    let j=null;
+    try{ j=await jget(u); }catch(e){ if(PROXY_OK) j=await jget(viaProxy(u)); }
+    if(Array.isArray(j)&&j.length) S.kp=+j[j.length-1].estimated_kp;
+  }catch(e){}
+}
+
+/* ══════════════ STANDINGS (ESPN, AL East + AFC East) ══════════════ */
+async function fetchStandings(){
+  const grab=async(path,divName)=>{
+    const j=await jget(`https://site.api.espn.com/apis/v2/sports/${path}/standings?level=3`);
+    const walk=n=>{
+      if(!n)return null;
+      if(n.name===divName)return n;
+      for(const c of (n.children||[])){const r=walk(c);if(r)return r;}
+      return null;
+    };
+    const div=walk(j)||((j.children||[]).map(walk).find(Boolean));
+    if(!div||!div.standings)return null;
+    return div.standings.entries.map(e=>{
+      const st=n=>{const s=(e.stats||[]).find(x=>x.name===n);return s?s.displayValue:"";};
+      return {team:e.team.abbreviation||e.team.shortDisplayName,
+              w:st("wins"),l:st("losses"),gb:st("gamesBehind")};
+    }).slice(0,5);
+  };
+  try{S.alEast=await grab("baseball/mlb","American League East");}catch(e){}
+  try{S.afcEast=await grab("football/nfl","AFC East");}catch(e){}
+}
+
+/* ══════════════ WORD OF THE DAY (split-flap, mornings) ══════════════ */
+const WOTD=[
+  ["PERSPICACIOUS","HAVING KEEN INSIGHT. SEEING WHAT OTHERS MISS."],
+  ["EQUANIMITY","CALM UNDER PRESSURE. THE TRADER'S EDGE."],
+  ["PARSIMONIOUS","EXTREMELY FRUGAL. TIGHT WITH CAPITAL."],
+  ["INDEFATIGABLE","INCAPABLE OF TIRING. RELENTLESS."],
+  ["SANGFROID","COOL COMPOSURE IN DANGER OR STRAIN."],
+  ["PROBITY","COMPLETE HONESTY AND INTEGRITY."],
+  ["ALACRITY","BRISK, CHEERFUL READINESS TO ACT."],
+  ["FIDUCIARY","BOUND BY TRUST TO ACT FOR OTHERS."],
+  ["ARBITRAGE","PROFITING FROM PRICE GAPS ACROSS MARKETS."],
+  ["TENACITY","GRIP THAT DOES NOT LET GO."],
+  ["ACUMEN","SHARP JUDGMENT, FAST AND RIGHT."],
+  ["APLOMB","SELF-ASSURANCE IN A TOUGH SPOT."],
+  ["CANDOR","FRANK, OPEN, HONEST SPEECH."],
+  ["RIGOR","EXACTNESS. NO SHORTCUTS."],
+  ["STALWART","LOYAL, RELIABLE, HARD-WORKING."],
+  ["PRUDENT","CAREFUL AND WISE ABOUT RISK."],
+  ["DECISIVE","SETTLING ISSUES QUICKLY AND FIRMLY."],
+  ["ASTUTE","CLEVER AT READING SITUATIONS."],
+  ["RESOLUTE","ADMIRABLY PURPOSEFUL AND UNWAVERING."],
+  ["SHREWD","SHARP POWERS OF JUDGMENT. HARD TO FOOL."],
+  ["VANGUARD","THE LEADING EDGE OF THE ADVANCE."],
+  ["METTLE","SPIRIT AND RESILIENCE UNDER FIRE."],
+  ["LIQUIDITY","HOW FAST AN ASSET TURNS TO CASH."],
+  ["SOLVENCY","ASSETS OVER LIABILITIES. STAYING POWER."],
+  ["DILIGENCE","CAREFUL, PERSISTENT EFFORT."],
+  ["GUMPTION","BOLD INITIATIVE AND COMMON SENSE."],
+  ["PANACHE","FLAMBOYANT CONFIDENCE OF STYLE."],
+  ["VERITAS","TRUTH. THE WHOLE POSITION, MARKED TO MARKET."],
+  ["STEADFAST","FIXED IN PURPOSE. IMMOVABLE."],
+  ["KEEN","EAGER, SHARP, FINELY HONED."],
+];
 
 /* ══════════════ NASA APOD (daily, cached in localStorage) ══════════════ */
 async function fetchApod(){
@@ -2185,6 +2318,93 @@ function buildSpots(){
   spots.push({k:"WORLD CLOCK",acc:"var(--cyan)",html:true,
     body:worldClockHTML(), after:startWorldClock, sub:""});
 
+  /* EARTHQUAKE WATCH — live epicenters on the world map */
+  if(S.quakes.length){
+    const top=S.quakes[0];
+    const ago=Math.max(1,Math.round((Date.now()-top.time)/3600000));
+    const px=q=>({x:((q.lon+180)/360*640).toFixed(1),y:((90-q.lat)/180*320).toFixed(1)});
+    const marks=S.quakes.map((q,i)=>{
+      const {x,y}=px(q);
+      const r=Math.max(2,(q.mag-1)*1.5).toFixed(1);
+      const c=q.mag>=6?"#ff4757":q.mag>=4.5?"#ffb400":"#4fd7e8";
+      const ring=i<3?`<circle class="ring" cx="${x}" cy="${y}" r="${r}" fill="none"
+        stroke="${c}" stroke-width="1.5" style="--d:${(i*.7).toFixed(1)}s"/>`:"";
+      const lbl=i<3?`<text x="${x}" y="${(+y-(+r)-4).toFixed(1)}" font-size="11"
+        fill="${c}" text-anchor="middle" font-weight="bold">M${q.mag.toFixed(1)}</text>`:"";
+      return `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" opacity=".85"/>${ring}${lbl}`;
+    }).join("");
+    spots.push({k:"EARTHQUAKE WATCH",acc:"var(--red,#ff4757)",html:true,dur:15000,
+      body:`<div class="wc-stage">
+        <svg class="wc-map qk-map" viewBox="0 0 640 320">
+          <path d="${WORLD_PATH}" fill="rgba(52,82,122,.20)" stroke="rgba(110,160,210,.38)" stroke-width="1"/>
+          ${marks}
+        </svg>
+        <div class="qk-info">
+          <div class="l">LARGEST · LAST 24H</div>
+          <div class="v">M${top.mag.toFixed(1)}</div>
+          <div class="p">${esc(top.place.toUpperCase())} · ${ago}H AGO</div>
+          <div class="n">${S.quakes.length} EVENTS M2.5+ WORLDWIDE</div>
+        </div>
+      </div>`,
+      sub:"USGS LIVE FEED · RINGS = THREE LARGEST"});
+  }
+
+  /* AURORA WATCH — planetary Kp gauge */
+  if(S.kp!=null){
+    const kp=S.kp;
+    const status=kp>=8?"SEVERE STORM G4+":kp>=7?"STRONG STORM G3":kp>=6?"MODERATE STORM G2"
+      :kp>=5?"MINOR STORM G1":kp>=4?"ACTIVE":"QUIET";
+    const vis=kp>=7?"AURORA POSSIBLE OVER CONNECTICUT":kp>=6?"VISIBLE FROM NORTHERN NEW ENGLAND"
+      :kp>=5?"VISIBLE FROM CANADA / N. BORDER":"NOT VISIBLE AT THIS LATITUDE";
+    const col=kp>=6?"#ff4757":kp>=4?"#ffb400":"#39d353";
+    const ang=(-90+Math.min(9,kp)/9*180).toFixed(1);
+    spots.push({k:"AURORA WATCH",acc:"var(--teal)",html:true,dur:12000,
+      body:`<div class="kp-wrap">
+        <svg class="kp-gauge" viewBox="0 0 220 130">
+          <path d="M20,110 A90,90 0 0 1 200,110" fill="none" stroke="#1c2534" stroke-width="14" stroke-linecap="round"/>
+          <path d="M20,110 A90,90 0 0 1 92,24" fill="none" stroke="#2c5d3f" stroke-width="14" stroke-linecap="round"/>
+          <path d="M92,24 A90,90 0 0 1 155,36" fill="none" stroke="#7d6224" stroke-width="14" stroke-linecap="round"/>
+          <path d="M155,36 A90,90 0 0 1 200,110" fill="none" stroke="#77303a" stroke-width="14" stroke-linecap="round"/>
+          <g transform="rotate(${ang} 110 110)">
+            <line x1="110" y1="110" x2="110" y2="34" stroke="${col}" stroke-width="4" stroke-linecap="round"/>
+          </g>
+          <circle cx="110" cy="110" r="7" fill="${col}"/>
+        </svg>
+        <div class="kp-info">
+          <div class="v" style="color:${col}">KP ${kp.toFixed(1)}</div>
+          <div class="s" style="color:${col}">${status}</div>
+          <div class="p">${vis}</div>
+        </div>
+      </div>`,
+      sub:"NOAA SPACE WEATHER · PLANETARY K-INDEX · UPDATES 30 MIN"});
+  }
+
+  /* STANDINGS — AL East + AFC East (NFL column hides out of season) */
+  if(S.alEast||S.afcEast){
+    const nflLive=S.afcEast&&S.afcEast.some(t=>+t.w>0||+t.l>0);
+    const tbl=(rows,title)=>rows?`<div class="st-col">
+      <div class="st-h">${title}</div>
+      ${rows.map((t,i)=>`<div class="st-r ${["BOS","NE"].includes(t.team)?"fav":""}">
+        <span class="rk">${i+1}</span><span class="tm">${esc(t.team)}</span>
+        <span class="wl">${esc(t.w)}-${esc(t.l)}</span>
+        <span class="gb">${esc(t.gb==="-"?"—":t.gb)}</span></div>`).join("")}
+      <div class="st-f">W-L · GB</div></div>`:"";
+    spots.push({k:"STANDINGS",acc:"var(--green)",html:true,dur:14000,
+      body:`<div class="st-wrap">
+        ${tbl(S.alEast,"AL EAST")}
+        ${nflLive?tbl(S.afcEast,"AFC EAST"):""}
+      </div>`,
+      sub:"ESPN · UPDATES HOURLY"});
+  }
+
+  /* WORD OF THE DAY — split-flap board, mornings only */
+  if(new Date().getHours()<12){
+    const doy=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000);
+    const [w,def]=WOTD[doy%WOTD.length];
+    spots.push({k:"WORD OF THE DAY",acc:"var(--cyan)",html:true,dur:45000,
+      body:vestaboardHTML({q:w,a:def},true), after:animateVestaboard, sub:""});
+  }
+
   /* NASA APOD — daily space photo */
   if(S.apod) spots.push({k:"NASA PICTURE OF THE DAY",acc:"var(--purple)",html:true,
     body:`<div class="ap-wrap">
@@ -2322,7 +2542,9 @@ function wxClass(){
   return "wx-sun";
 }
 function bgFor(k){
-  if(/MOON|NASA|SIGNAL/.test(k)) return "bg-space";
+  if(/MOON|NASA|SIGNAL|AURORA WATCH/.test(k)) return "bg-space";
+  if(/STANDINGS/.test(k)) return "bg-field";
+  if(/WORD OF THE DAY/.test(k)) return "bg-beams";
   if(/MARKET|FED|BANKING/.test(k)) return "bg-grid";
   if(/^(MLB|NBA|NHL|NFL|NCAAB|WC|EPL)\b/.test(k)) return "bg-field";
   if(/GET IT DONE|PAINTING/.test(k)) return "bg-beams";
@@ -2771,6 +2993,17 @@ async function fetchTasks(){
   every(fetchTasks,5*60*1000);
   every(fetchApod,6*60*60*1000);   // daily image; DEMO_KEY budget is ample at 4/day
   every(fetchArt,6*60*60*1000);    // daily painting; AIC API is unmetered
+  every(fetchQuakes,30*60*1000);   // USGS live quake feed
+  every(fetchKp,30*60*1000);       // NOAA space weather
+  every(fetchStandings,60*60*1000);// division standings
+  // Ship's bell: soft top-of-hour chime, office hours only (needs speaker)
+  setInterval(()=>{
+    const d=new Date();
+    if(d.getMinutes()===0&&!S.bellRung&&d.getHours()>=8&&d.getHours()<=18){
+      S.bellRung=true; bellChime();
+    }
+    if(d.getMinutes()!==0) S.bellRung=false;
+  },15000);
   every(fetchWhoop,30*60*1000);
   every(fetchAlerts,5*60*1000);
   setTimeout(showSpot,1200);
@@ -2805,6 +3038,18 @@ async function fetchTasks(){
       showSpot();},2500);
   if(location.hash==="#testtitle")
     setTimeout(()=>{buildSpots();spotIdx=0;showSpot();},1500);
+  if(location.hash==="#testquake")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="EARTHQUAKE WATCH"));
+      showSpot();},3000);
+  if(location.hash==="#testkp")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="AURORA WATCH"));
+      showSpot();},3000);
+  if(location.hash==="#teststandings")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
+      showSpot();},3000);
   if(location.hash==="#testvolcano") setTimeout(()=>{ambIdx=0;showAmbient();},1500);
   if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=1;showAmbient();},1500);
   if(location.hash==="#testsolar")   setTimeout(()=>{ambIdx=2;showAmbient();},1500);

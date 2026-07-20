@@ -38,6 +38,8 @@ ALLOWED_HOSTS = {
     "todew.dewitt-bf3.workers.dev",  # ToDew task sync (Work-category to-do page)
     "api.nasa.gov",             # APOD daily space photo
     "api.artic.edu",            # Art Institute of Chicago — painting of the day
+    "earthquake.usgs.gov",      # live quake feed (Earthquake Watch)
+    "services.swpc.noaa.gov",   # planetary Kp index (Aurora Watch)
 }
 UA = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
