@@ -2154,19 +2154,30 @@ function titleFx(){
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
     if(ctx.state==="suspended")ctx.resume();
     const t0=ctx.currentTime;
-    [[1400,160,0,1.4],[1050,120,.5,1.6]].forEach(([f0,f1,st,d])=>{
-      const o=ctx.createOscillator(),v=ctx.createGain(),bp=ctx.createBiquadFilter();
-      o.type="sine";
-      o.frequency.setValueAtTime(f0,t0+st);
-      o.frequency.exponentialRampToValueAtTime(f1,t0+st+d);
-      bp.type="bandpass";bp.frequency.value=800;bp.Q.value=.8;
-      v.gain.setValueAtTime(.0001,t0+st);
-      v.gain.linearRampToValueAtTime(.22,t0+st+.08);
-      v.gain.exponentialRampToValueAtTime(.0001,t0+st+d);
-      o.connect(bp);bp.connect(v);v.connect(ctx.destination);
-      o.start(t0+st);o.stop(t0+st+d+.1);
-    });
-    setTimeout(()=>ctx.close(),4000);
+    // Dark low laser: resonant lowpass sweeping down a sawtooth dive,
+    // plus a sine sub layer for weight. ~2.4s total.
+    const o=ctx.createOscillator(),lp=ctx.createBiquadFilter(),v=ctx.createGain();
+    o.type="sawtooth";
+    o.frequency.setValueAtTime(260,t0);
+    o.frequency.exponentialRampToValueAtTime(48,t0+2.2);
+    lp.type="lowpass";lp.Q.value=7;
+    lp.frequency.setValueAtTime(1000,t0);
+    lp.frequency.exponentialRampToValueAtTime(110,t0+2.2);
+    v.gain.setValueAtTime(.0001,t0);
+    v.gain.linearRampToValueAtTime(.3,t0+.15);
+    v.gain.exponentialRampToValueAtTime(.0001,t0+2.4);
+    o.connect(lp);lp.connect(v);v.connect(ctx.destination);
+    o.start(t0);o.stop(t0+2.5);
+    const s=ctx.createOscillator(),sv=ctx.createGain();
+    s.type="sine";
+    s.frequency.setValueAtTime(130,t0);
+    s.frequency.exponentialRampToValueAtTime(52,t0+2.2);
+    sv.gain.setValueAtTime(.0001,t0);
+    sv.gain.linearRampToValueAtTime(.34,t0+.2);
+    sv.gain.exponentialRampToValueAtTime(.0001,t0+2.4);
+    s.connect(sv);sv.connect(ctx.destination);
+    s.start(t0);s.stop(t0+2.5);
+    setTimeout(()=>ctx.close(),3500);
   }catch(e){}
 }
 function titleHTML(){
