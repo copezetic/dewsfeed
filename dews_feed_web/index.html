@@ -501,6 +501,16 @@
     background-size:1.7vw 2.6vh;
     animation:twinkle 3.5s ease-in-out infinite alternate-reverse}
 
+  /* AURORA — soft curtains behind the Kp gauge page */
+  #pageBg.bg-aurora i{left:-6%;width:50%;top:-30%;height:130%;opacity:.5;
+    filter:blur(2.5vh);transform:skewX(-13deg);
+    background:linear-gradient(180deg,transparent 6%,rgba(57,231,141,.5) 28%,rgba(38,208,224,.32) 58%,transparent 88%);
+    animation:aur 15s ease-in-out infinite alternate}
+  #pageBg.bg-aurora em{left:48%;width:50%;top:-30%;height:130%;opacity:.42;
+    filter:blur(2.5vh);transform:skewX(-13deg);
+    background:linear-gradient(180deg,transparent 8%,rgba(150,95,235,.45) 30%,rgba(57,231,141,.28) 60%,transparent 90%);
+    animation:aur 19s ease-in-out -8s infinite alternate-reverse}
+
   /* STARS — denser twinkle field (news/default) */
   #pageBg.bg-stars i{opacity:.5;
     background-image:radial-gradient(circle,rgba(190,210,255,.8) 0 1px,transparent 1.7px);
@@ -628,7 +638,7 @@
   #wx1V svg,#wx2V svg{height:3.4vh;width:auto;vertical-align:-.8vh}
   .pg-wm svg{width:26vh;height:26vh;display:block}
   .pg-wm{color:#e8ecf2}
-  .mn-big svg{width:46vh;height:46vh;display:block;
+  .mn-big svg{width:58vh;height:58vh;display:block;
     animation:moonSpin 75s linear infinite;
     filter:drop-shadow(0 0 26px rgba(232,226,207,.3))}
   .mn-strip{display:flex;align-items:center;gap:.7vw}
@@ -713,10 +723,12 @@
   .ti-l{display:inline-block;color:#f4f7ff;
     text-shadow:.35vh 0 0 rgba(255,60,90,.55),-.35vh 0 0 rgba(40,220,255,.55),
       0 0 3vh rgba(255,180,0,.6);
-    animation:tiIn .9s calc(var(--i)*.07s) cubic-bezier(.2,.8,.25,1.1) both,
-      tiFloat 4.5s ease-in-out calc(var(--i)*-.4s + 1.6s) infinite alternate,
+    animation:tiIn 1.4s calc(var(--i)*.16s) cubic-bezier(.2,.8,.25,1.1) both,
+      tiFloat 4.5s ease-in-out calc(var(--i)*-.4s + 3.6s) infinite alternate,
       tiGlow 7s linear calc(var(--i)*-.6s) infinite}
-  @keyframes tiIn{from{opacity:0;transform:translateZ(-650px) rotateY(80deg) translateY(-9vh)}
+  @keyframes tiIn{from{opacity:0;transform:translateZ(-900px) rotateY(100deg) translateY(-12vh)}
+    55%{opacity:1}
+    75%{transform:translateZ(60px) rotateY(-8deg) translateY(.6vh)}
     to{opacity:1;transform:none}}
   @keyframes tiFloat{from{transform:translateZ(-35px) rotateY(-9deg) translateY(.5vh)}
     to{transform:translateZ(35px) rotateY(9deg) translateY(-.5vh)}}
@@ -727,10 +739,10 @@
   .ti-sub{font-family:var(--mono);font-size:2.6vh;letter-spacing:.5em;
     color:var(--ink-dim);margin-top:4vh;white-space:nowrap;overflow:hidden;
     width:0;border-right:2px solid var(--amber);
-    animation:tiType 1.6s steps(34) 1.4s forwards}
+    animation:tiType 1.6s steps(34) 3.4s forwards}
   @keyframes tiType{to{width:100%}}
   .ti-ver{font-family:var(--mono);font-size:1.8vh;letter-spacing:.3em;
-    color:var(--ink-faint);margin-top:1.6vh;opacity:0;animation:tiFade .6s 3.2s forwards}
+    color:var(--ink-faint);margin-top:1.6vh;opacity:0;animation:tiFade .6s 5.4s forwards}
   @keyframes tiFade{to{opacity:1}}
 
   /* ── NIGHT AMBIENT SCENES — explicit stage heights: these scenes are all
@@ -778,6 +790,14 @@
     transform:translate(-50%,-50%)}
   @keyframes orbSpin{from{transform:translate(-50%,-50%) rotate(0)}
                      to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+  /* ── GLOBAL SITREP ── */
+  .sr-list{position:relative;z-index:1;display:flex;flex-direction:column;gap:2vh;
+    max-width:88vw}
+  .sr-h{display:flex;gap:1.4vw;align-items:baseline;font-size:3.4vh;font-weight:650;
+    line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  .sr-h .b{color:var(--red,#ff4757);font-family:var(--mono);flex:0 0 auto}
+  .sr-h .s{color:var(--ink-faint);font-family:var(--mono);font-size:2vh;flex:0 0 auto}
 
   /* ── EARTHQUAKE WATCH ── */
   .qk-map .ring{transform-box:fill-box;transform-origin:center;
@@ -1088,7 +1108,7 @@ const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{
           games:[], natNews:[], locNews:[], bankNews:[], sportsNews:[], traffic:null,
           tides:null, lakeTemp:null, flights:[], forecast:[], hourly:[],
           buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null,
-          quakes:[], kp:null, alEast:null, afcEast:null };
+          quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[] };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -1373,15 +1393,18 @@ train:`<svg class="wire" viewBox="0 0 430 100">
   </g></svg>`,
 jeep:`<svg class="wire" viewBox="0 0 300 130">
   <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
-  <path d="M20 92 V62 Q20 55 28 53 L60 49 L80 29 Q84 23 94 23 L206 23 Q214 23 218 29 L234 49 L274 55 Q284 57 284 65 V92Z"/>
-  <rect x="86" y="27" width="124" height="21" rx="3"/>
-  <line x1="130" y1="27" x2="130" y2="48"/><line x1="170" y1="27" x2="170" y2="48"/>
-  <rect x="32" y="60" width="240" height="21" rx="3"/>
-  ${[46,74,102,130,158,186,214,242].map(x=>`<line x1="${x}" y1="79" x2="${x+14}" y2="62" opacity=".55"/>`).join("")}
-  <line x1="98" y1="15" x2="208" y2="15"/>
-  <line x1="104" y1="15" x2="104" y2="23"/><line x1="200" y1="15" x2="200" y2="23"/>
-  <g class="wh" style="transform-origin:86px 96px"><circle cx="86" cy="96" r="16"/><line x1="86" y1="80" x2="86" y2="112"/><line x1="70" y1="96" x2="102" y2="96"/></g>
-  <g class="wh" style="transform-origin:222px 96px"><circle cx="222" cy="96" r="16"/><line x1="222" y1="80" x2="222" y2="112"/><line x1="206" y1="96" x2="238" y2="96"/></g>
+  <path d="M20 92 V32 Q20 25 28 25 L190 25 L214 45 L272 47 Q286 49 286 62 V92 Z"/>
+  <line x1="30" y1="17" x2="186" y2="17"/>
+  <line x1="42" y1="17" x2="42" y2="25"/><line x1="174" y1="17" x2="174" y2="25"/>
+  <rect x="30" y="31" width="152" height="16" rx="2"/>
+  <line x1="82" y1="31" x2="82" y2="47"/><line x1="134" y1="31" x2="134" y2="47"/>
+  <path d="M188 28 L211 45 L188 45 Z"/>
+  <rect x="26" y="56" width="252" height="22" rx="3"/>
+  ${[36,64,92,120,148,176,204,232,258].map(x=>`<line x1="${x}" y1="77" x2="${x+13}" y2="57" opacity=".55"/>`).join("")}
+  <rect x="270" y="50" width="14" height="11" rx="2"/>
+  <line x1="274" y1="50" x2="274" y2="61"/><line x1="279" y1="50" x2="279" y2="61"/>
+  <g class="wh" style="transform-origin:80px 96px"><circle cx="80" cy="96" r="16"/><line x1="80" y1="80" x2="80" y2="112"/><line x1="64" y1="96" x2="96" y2="96"/></g>
+  <g class="wh" style="transform-origin:232px 96px"><circle cx="232" cy="96" r="16"/><line x1="232" y1="80" x2="232" y2="112"/><line x1="216" y1="96" x2="248" y2="96"/></g>
   </g></svg>`,
 tornado:`<svg class="wire" viewBox="0 0 200 165">
   ${[[100,26,76,15],[100,50,59,13],[98,72,44,11],[94,92,31,9],[90,110,20,7],[87,126,11,5],[85,141,5,3]].map((e,i)=>`<ellipse class="tw" style="animation-delay:${(-i*.3).toFixed(1)}s" cx="${e[0]}" cy="${e[1]}" rx="${e[2]}" ry="${e[3]}" fill="none" stroke="currentColor" stroke-width="${(4-i*.4).toFixed(1)}" opacity="${(.85-i*.09).toFixed(2)}"/>`).join("")}
@@ -1800,7 +1823,7 @@ function vestaboardHTML(q,plain){
       :`<span class="vb-cell"></span>`).join("")}</div>`;
   const totalRows=rows.length+1;   // + chip row
   // Tile size: fill the width (88vw budget) unless height (54vh) binds first
-  const cs=`min(${(88/(cols*1.13)).toFixed(2)}vw,${(54/(totalRows*1.6)).toFixed(2)}vh)`;
+  const cs=`min(${(94/(cols*1.13)).toFixed(2)}vw,${(64/(totalRows*1.6)).toFixed(2)}vh)`;
   return `<div class="vb-wrap" data-cols="${cols}" style="--cs:${cs}">${rows.map(rowHTML).join("")}${chipRow}</div>`;
 }
 let vbTimer=null,vbCtx=null;
@@ -1949,6 +1972,21 @@ async function fetchArt(){
         img:`https://www.artic.edu/iiif/2/${d.image_id}/full/843,/0/default.jpg`};
       localStorage.setItem("artday",JSON.stringify(S.art));
     }
+  }catch(e){}
+}
+
+/* ══════════════ RAIN NOWCAST — alert when rain starts at the office ══════ */
+let rainWet=null;   // null until first reading — no alert on boot
+async function fetchRain(){
+  try{
+    const j=await jget(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.office.lat}&longitude=${CFG.office.lon}&minutely_15=precipitation&forecast_hours=1`);
+    const p=(j.minutely_15&&j.minutely_15.precipitation)||[];
+    const wet=p.slice(0,2).some(x=>x>=0.1);   // raining now / within 15 min
+    if(wet&&rainWet===false)
+      takeover("breaking","RAIN STARTING",
+        "Rain is starting at the office — grab the umbrella if you're heading out.",
+        "GREENWICH NOWCAST · OPEN-METEO",25);
+    rainWet=wet;
   }catch(e){}
 }
 
@@ -2109,6 +2147,28 @@ function startWorldClock(){ stopWorldClock(); tickWorldClock(); wcTimer=setInter
 /* ══════════════ TITLE IDENT ══════════════
    Station ident: warp tunnel + letters flying in from deep Z, floating as a
    3D ribbon with chromatic-split hue-cycling glow. Opens every cycle. */
+// Soft laser sweep: two staggered descending sines with airy bandpass —
+// plays as the ident letters land.
+function titleFx(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==="suspended")ctx.resume();
+    const t0=ctx.currentTime;
+    [[1400,160,0,1.4],[1050,120,.5,1.6]].forEach(([f0,f1,st,d])=>{
+      const o=ctx.createOscillator(),v=ctx.createGain(),bp=ctx.createBiquadFilter();
+      o.type="sine";
+      o.frequency.setValueAtTime(f0,t0+st);
+      o.frequency.exponentialRampToValueAtTime(f1,t0+st+d);
+      bp.type="bandpass";bp.frequency.value=800;bp.Q.value=.8;
+      v.gain.setValueAtTime(.0001,t0+st);
+      v.gain.linearRampToValueAtTime(.22,t0+st+.08);
+      v.gain.exponentialRampToValueAtTime(.0001,t0+st+d);
+      o.connect(bp);bp.connect(v);v.connect(ctx.destination);
+      o.start(t0+st);o.stop(t0+st+d+.1);
+    });
+    setTimeout(()=>ctx.close(),4000);
+  }catch(e){}
+}
 function titleHTML(){
   const word="THE DEWS FEED";
   return `<div class="ti-stage">
@@ -2203,8 +2263,8 @@ function buildSpots(){
   spots.length=0;
 
   /* STATION IDENT — every rotation opens with the title card */
-  spots.push({k:"SIGNAL ACQUIRED",acc:"var(--amber)",html:true,dur:9000,
-    body:titleHTML(), sub:""});
+  spots.push({k:"SIGNAL ACQUIRED",acc:"var(--amber)",html:true,dur:12000,
+    body:titleHTML(), after:titleFx, sub:""});
 
   if(S.natNews[0]) spots.push({k:"TOP STORIES",acc:"var(--blue)",html:true,
     body:newsPageHTML(S.natNews,3,"news"),
@@ -2355,6 +2415,26 @@ function buildSpots(){
         </div>
       </div>`,
       sub:"USGS LIVE FEED · RINGS = THREE LARGEST"});
+  }
+
+  /* GLOBAL SITREP — SitDeck-style situation board: world map + wire */
+  if(S.sitrep&&S.sitrep.length){
+    const dots=S.quakes.slice(0,20).map(q=>{
+      const x=((q.lon+180)/360*640).toFixed(1), y=((90-q.lat)/180*320).toFixed(1);
+      return `<circle cx="${x}" cy="${y}" r="2.5" fill="#ffb400" opacity=".7"/>`;
+    }).join("");
+    spots.push({k:"GLOBAL SITREP",acc:"var(--red,#ff4757)",html:true,dur:16000,
+      body:`<div class="wc-stage">
+        <svg class="wc-map" viewBox="0 0 640 320">
+          <path d="${WORLD_PATH}" fill="rgba(52,82,122,.20)" stroke="rgba(110,160,210,.38)" stroke-width="1"/>
+          ${dots}
+        </svg>
+        <div class="sr-list">${S.sitrep.map(h=>`
+          <div class="sr-h"><span class="b">◈</span><span>${esc(h.t)}</span>
+          ${h.src?`<span class="s">${esc(h.src.toUpperCase())}</span>`:""}</div>`).join("")}
+        </div>
+      </div>`,
+      sub:"WORLD WIRE · AMBER = SEISMIC EVENTS 24H"});
   }
 
   /* AURORA WATCH — planetary Kp gauge */
@@ -2550,7 +2630,8 @@ function wxClass(){
   return "wx-sun";
 }
 function bgFor(k){
-  if(/MOON|NASA|SIGNAL|AURORA WATCH/.test(k)) return "bg-space";
+  if(/AURORA WATCH/.test(k)) return "bg-aurora";
+  if(/MOON|NASA|SIGNAL/.test(k)) return "bg-space";
   if(/STANDINGS/.test(k)) return "bg-field";
   if(/WORD OF THE DAY/.test(k)) return "bg-beams";
   if(/MARKET|FED|BANKING/.test(k)) return "bg-grid";
@@ -2934,6 +3015,8 @@ async function fetchNews(){
   try{S.bankNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/search?q=banking%20OR%20%22regional%20banks%22%20OR%20%22Federal%20Reserve%22&hl=en-US&gl=US&ceid=US:en")),6);}catch(e){}
   // Google News sports topic — ESPN's own RSS soft-blocks the proxy (200, empty body)
   try{S.sportsNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en")),4);}catch(e){}
+  // Global-security wire for the SITREP page (SitDeck-style situation board)
+  try{S.sitrep=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
   buildNewsTicker();
   checkBreaking();
 }
@@ -3002,6 +3085,7 @@ async function fetchTasks(){
   every(fetchApod,6*60*60*1000);   // daily image; DEMO_KEY budget is ample at 4/day
   every(fetchArt,6*60*60*1000);    // daily painting; AIC API is unmetered
   every(fetchQuakes,30*60*1000);   // USGS live quake feed
+  every(fetchRain,10*60*1000);     // rain-start nowcast alert
   every(fetchKp,30*60*1000);       // NOAA space weather
   every(fetchStandings,60*60*1000);// division standings
   // Ship's bell: soft top-of-hour chime, office hours only (needs speaker)
