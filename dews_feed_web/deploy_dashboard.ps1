@@ -14,7 +14,7 @@ $scp   = "C:\Windows\System32\OpenSSH\scp.exe"
 
 # Hash the deployable set (NB: -Path parameter, not pipeline — PS 5.1's
 # Get-FileHash does not bind plain strings from the pipeline)
-$files = @("$src\index.html", "$src\proxy.py", "$src\secrets.js", $tasks) | Where-Object { Test-Path $_ }
+$files = @("$src\index.html", "$src\proxy.py", "$src\secrets.js", "$src\ident.wav", $tasks) | Where-Object { Test-Path $_ }
 $hash  = ((Get-FileHash -Algorithm SHA256 -Path $files).Hash) -join "|"
 
 # Always sync the task file (cheap); only reboot on dashboard changes
@@ -28,7 +28,7 @@ if ($hash.Trim() -eq $old.Trim()) { exit 0 }   # nothing new to deploy
 if ($LASTEXITCODE -ne 0) { exit 0 }            # Pi unreachable — retry next run
 
 # Deploy + apply
-& $scp -i $key -o ConnectTimeout=8 "$src\index.html" "$src\proxy.py" "$src\secrets.js" "${pi}:/home/dew/dews_feed_web/" 2>$null
+& $scp -i $key -o ConnectTimeout=8 "$src\index.html" "$src\proxy.py" "$src\secrets.js" "$src\ident.wav" "${pi}:/home/dew/dews_feed_web/" 2>$null
 if ($LASTEXITCODE -eq 0) {
     Set-Content -Path $stamp -Value $hash -Encoding ascii
     & $ssh -i $key -o ConnectTimeout=8 $pi "sudo reboot" 2>$null

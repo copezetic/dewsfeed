@@ -40,6 +40,7 @@ ALLOWED_HOSTS = {
     "api.artic.edu",            # Art Institute of Chicago — painting of the day
     "earthquake.usgs.gov",      # live quake feed (Earthquake Watch)
     "services.swpc.noaa.gov",   # planetary Kp index (Aurora Watch)
+    "gamma-api.polymarket.com", # prediction-market odds (keyless)
 }
 UA = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")

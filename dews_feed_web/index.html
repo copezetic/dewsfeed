@@ -110,6 +110,18 @@
   .mk-panel .ml{font-family:var(--mono);font-size:2.2vh;letter-spacing:.22em;color:var(--ink-dim);
                 display:flex;align-items:center;gap:.8vw}
   .mk-panel .ml img{height:3.6vh;width:3.6vh;border-radius:.6vh;object-fit:contain;background:#fff;padding:.3vh}
+  /* NB: must out-rank ".mk-panel svg" (the 100%-wide sparkline rule) */
+  .mk-panel .ml svg.pnbk-badge{height:4.2vh;width:4.2vh;flex:none;
+    filter:drop-shadow(0 0 .8vh rgba(208,52,44,.5))}
+  /* Prediction-markets board */
+  .pm-wrap{display:flex;flex-direction:column;gap:1.6vh;width:86vw;margin:0 auto}
+  .pm{display:flex;align-items:center;gap:2.2vw;background:rgba(10,16,30,.55);
+    border:1px solid rgba(120,160,255,.14);border-left:.4vw solid var(--purple);
+    border-radius:1vh;padding:1.5vh 1.8vw}
+  .pm .pct{font-family:var(--mono);font-size:5vh;font-weight:800;min-width:9vw;text-align:right;
+    text-shadow:0 0 1.4vh currentColor}
+  .pm .q{flex:1;font-size:2.9vh;font-weight:650;line-height:1.25}
+  .pm .v{font-family:var(--mono);font-size:1.9vh;color:var(--ink-dim);letter-spacing:.12em;white-space:nowrap}
   .mk-panel .row{display:flex;align-items:baseline;gap:1.2vw;margin:.6vh 0}
   .mk-panel .mv{font-family:var(--mono);font-weight:800;font-size:7.5vh;line-height:1;
                 font-variant-numeric:tabular-nums}
@@ -1108,7 +1120,8 @@ const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{
           games:[], natNews:[], locNews:[], bankNews:[], sportsNews:[], traffic:null,
           tides:null, lakeTemp:null, flights:[], forecast:[], hourly:[],
           buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null,
-          quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[] };
+          quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[],
+          predict:[], riaNews:[] };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -1975,6 +1988,20 @@ async function fetchArt(){
   }catch(e){}
 }
 
+/* ══════════════ PREDICTION MARKETS (Polymarket Gamma, keyless) ══════════ */
+async function fetchPredict(){
+  try{
+    const u="https://gamma-api.polymarket.com/markets?closed=false&limit=10&order=volume24hr&ascending=false";
+    let j=null;
+    try{ j=await jget(u); }catch(e){ if(PROXY_OK) j=await jget(viaProxy(u)); }
+    S.predict=(j||[]).map(m=>{
+      let yes=null;
+      try{ yes=Math.round(parseFloat(JSON.parse(m.outcomePrices||"[]")[0]||"")*100); }catch(e){}
+      return {q:m.question||"", yes, vol:+m.volume24hr||0};
+    }).filter(m=>m.q&&m.yes!=null&&m.yes>0&&m.yes<100).slice(0,6);
+  }catch(e){}
+}
+
 /* ══════════════ RAIN NOWCAST — alert when rain starts at the office ══════ */
 let rainWet=null;   // null until first reading — no alert on boot
 async function fetchRain(){
@@ -2153,31 +2180,11 @@ function titleFx(){
   try{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
     if(ctx.state==="suspended")ctx.resume();
-    const t0=ctx.currentTime;
-    // Dark low laser: resonant lowpass sweeping down a sawtooth dive,
-    // plus a sine sub layer for weight. ~2.4s total.
-    const o=ctx.createOscillator(),lp=ctx.createBiquadFilter(),v=ctx.createGain();
-    o.type="sawtooth";
-    o.frequency.setValueAtTime(260,t0);
-    o.frequency.exponentialRampToValueAtTime(48,t0+2.2);
-    lp.type="lowpass";lp.Q.value=7;
-    lp.frequency.setValueAtTime(1000,t0);
-    lp.frequency.exponentialRampToValueAtTime(110,t0+2.2);
-    v.gain.setValueAtTime(.0001,t0);
-    v.gain.linearRampToValueAtTime(.3,t0+.15);
-    v.gain.exponentialRampToValueAtTime(.0001,t0+2.4);
-    o.connect(lp);lp.connect(v);v.connect(ctx.destination);
-    o.start(t0);o.stop(t0+2.5);
-    const s=ctx.createOscillator(),sv=ctx.createGain();
-    s.type="sine";
-    s.frequency.setValueAtTime(130,t0);
-    s.frequency.exponentialRampToValueAtTime(52,t0+2.2);
-    sv.gain.setValueAtTime(.0001,t0);
-    sv.gain.linearRampToValueAtTime(.34,t0+.2);
-    sv.gain.exponentialRampToValueAtTime(.0001,t0+2.4);
-    s.connect(sv);sv.connect(ctx.destination);
-    s.start(t0);s.stop(t0+2.5);
-    setTimeout(()=>ctx.close(),3500);
+    // Produced electronic ident (riser → kick drop → arp → pad), rendered
+    // offline to ident.wav for real production quality.
+    const au=new Audio("ident.wav");
+    au.volume=1;
+    au.play().catch(()=>{});
   }catch(e){}
 }
 function titleHTML(){
@@ -2328,7 +2335,13 @@ function buildSpots(){
           <span class="mc ${q.chg>=0?"up":"down"}">${q.chg>=0?"▲":"▼"} ${Math.abs(q.chg).toFixed(2)}%</span>
         </div>${chart}</div>`;
     };
-    const pnbkLogoImg=`<img src="${CFG.pnbkLogo}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${CFG.pnbkLogoAlt}'}else{this.style.display='none'}">`;
+    // Inline Patriot Bank badge — navy disc, red ring, white star — so the
+    // logo always renders even when favicon services are blocked on bank WiFi.
+    const pnbkLogoImg=`<svg class="pnbk-badge" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="19" fill="#0d2c5e"/>
+      <circle cx="20" cy="20" r="19" fill="none" stroke="#d0342c" stroke-width="3.4"/>
+      <path fill="#fff" d="M20 8.5 L22.9 16.4 L31.3 16.6 L24.6 21.7 L27 29.8 L20 25 L13 29.8 L15.4 21.7 L8.7 16.6 L17.1 16.4 Z"/>
+    </svg>`;
     spots.push({k:"MARKETS",acc:"var(--amber)",html:true,
       body:`<div class="intro intro-candles"><span class="icd">${VEH.candles}</span></div>
       <div class="mk-wrap">
@@ -2361,6 +2374,11 @@ function buildSpots(){
   if(S.bankNews[0]) spots.push({k:"BANKING & FINANCE",acc:"var(--green)",html:true,
     body:newsPageHTML(S.bankNews,3,"bank"),
     sub:(S.bankNews[0].src||"").toUpperCase()});
+
+  /* RIA & WEALTH — advisor-industry wire, right after banking */
+  if(S.riaNews[0]) spots.push({k:"RIA & WEALTH MGMT",acc:"var(--green)",html:true,
+    body:newsPageHTML(S.riaNews,3,"bank"),
+    sub:(S.riaNews[0].src||"").toUpperCase()});
 
   /* WEATHER TODAY — hourly strip + live doppler radar (lunch check) */
   if(S.hourly.length) spots.push({k:"WEATHER TODAY · DOPPLER",acc:"var(--cyan)",html:true,dur:16000,
@@ -2426,6 +2444,20 @@ function buildSpots(){
         </div>
       </div>`,
       sub:"USGS LIVE FEED · RINGS = THREE LARGEST"});
+  }
+
+  /* PREDICTION MARKETS — Polymarket top volume: the odds as a news source */
+  if(S.predict.length){
+    spots.push({k:"PREDICTION MARKETS",acc:"var(--purple)",html:true,dur:16000,
+      body:`<div class="pm-wrap">${S.predict.map(m=>{
+        const col=m.yes>=60?"#4ade5b":m.yes>=40?"#ffb400":"#ff5a5a";
+        const vol=m.vol>=1e6?"$"+(m.vol/1e6).toFixed(1)+"M":"$"+Math.round(m.vol/1e3)+"K";
+        return `<div class="pm">
+          <span class="pct" style="color:${col}">${m.yes}%</span>
+          <span class="q">${esc(trimToLen(m.q,80))}</span>
+          <span class="v">${vol} 24H</span></div>`;
+      }).join("")}</div><span class="pg-wm">🎲</span>`,
+      sub:"POLYMARKET · TOP VOLUME · % = YES PRICE"});
   }
 
   /* GLOBAL SITREP — SitDeck-style situation board: world map + wire */
@@ -2645,7 +2677,7 @@ function bgFor(k){
   if(/MOON|NASA|SIGNAL/.test(k)) return "bg-space";
   if(/STANDINGS/.test(k)) return "bg-field";
   if(/WORD OF THE DAY/.test(k)) return "bg-beams";
-  if(/MARKET|FED|BANKING/.test(k)) return "bg-grid";
+  if(/MARKET|FED|BANKING|PREDICTION|RIA/.test(k)) return "bg-grid";
   if(/^(MLB|NBA|NHL|NFL|NCAAB|WC|EPL)\b/.test(k)) return "bg-field";
   if(/GET IT DONE|PAINTING/.test(k)) return "bg-beams";
   if(/WEATHER|7-DAY/.test(k)) return "bg-sky "+wxClass();
@@ -3009,6 +3041,7 @@ async function fetchTraffic(){
                    lake:await osrm(CFG.lake.lat,CFG.lake.lon), live:false};}catch(e2){}
   }
 }
+const trimToLen=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
 function rssTitles(xml,limit){
   const doc=new DOMParser().parseFromString(xml,"text/xml");
   return [...doc.querySelectorAll("item")].slice(0,limit).map(it=>{
@@ -3028,6 +3061,8 @@ async function fetchNews(){
   try{S.sportsNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en")),4);}catch(e){}
   // Global-security wire for the SITREP page (SitDeck-style situation board)
   try{S.sitrep=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
+  // RIA / wealth-management wire
+  try{S.riaNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/search?q=%22RIA%22%20OR%20%22registered%20investment%20advisor%22%20wealth%20management&hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
   buildNewsTicker();
   checkBreaking();
 }
@@ -3099,6 +3134,7 @@ async function fetchTasks(){
   every(fetchRain,10*60*1000);     // rain-start nowcast alert
   every(fetchKp,30*60*1000);       // NOAA space weather
   every(fetchStandings,60*60*1000);// division standings
+  every(fetchPredict,15*60*1000);  // Polymarket top-volume odds
   // Ship's bell: soft top-of-hour chime, office hours only (needs speaker)
   setInterval(()=>{
     const d=new Date();
@@ -3152,6 +3188,18 @@ async function fetchTasks(){
   if(location.hash==="#teststandings")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
+      showSpot();},3000);
+  if(location.hash==="#testmarkets")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="MARKETS"));
+      showSpot();},3000);
+  if(location.hash==="#testpredict")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="PREDICTION MARKETS"));
+      showSpot();},3000);
+  if(location.hash==="#testria")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="RIA & WEALTH MGMT"));
       showSpot();},3000);
   if(location.hash==="#testvolcano") setTimeout(()=>{ambIdx=0;showAmbient();},1500);
   if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=1;showAmbient();},1500);
