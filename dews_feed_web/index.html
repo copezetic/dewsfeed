@@ -1210,6 +1210,10 @@ function chime(kind){
 }
 
 function takeover(kind,kicker,body,sub,seconds){
+  // Page-test hashes (#testsitrep etc.) need the page visible — suppress real
+  // takeovers so a busy news day can't cover the slide under test.
+  const th=location.hash;
+  if(th.startsWith("#test")&&th!=="#testwarn"&&th!=="#testbreak") return;
   chime(kind==="breaking"?"breaking":"nws");
   const el=$("alert");
   el.className="show "+kind;
@@ -2364,6 +2368,20 @@ function buildSpots(){
     body:fedWatchHTML()+'<span class="pg-wm">'+WM_SVG.bank+'</span>',
     sub:"FOMC DECISIONS AT 2:00 PM ET · SEP = QUARTERLY PROJECTIONS"});
 
+  /* PREDICTION MARKETS — Polymarket top volume, right after the money block */
+  if(S.predict.length){
+    spots.push({k:"PREDICTION MARKETS",acc:"var(--purple)",html:true,dur:16000,
+      body:`<div class="pm-wrap">${S.predict.map(m=>{
+        const col=m.yes>=60?"#4ade5b":m.yes>=40?"#ffb400":"#ff5a5a";
+        const vol=m.vol>=1e6?"$"+(m.vol/1e6).toFixed(1)+"M":"$"+Math.round(m.vol/1e3)+"K";
+        return `<div class="pm">
+          <span class="pct" style="color:${col}">${m.yes}%</span>
+          <span class="q">${esc(trimToLen(m.q,80))}</span>
+          <span class="v">${vol} 24H</span></div>`;
+      }).join("")}</div><span class="pg-wm">🎲</span>`,
+      sub:"POLYMARKET · TOP VOLUME · % = YES PRICE"});
+  }
+
   /* FLIGHTS radar — only with FRESH data (OpenSky's anonymous tier gets
      rate-limited on busy shared IPs; a stale radar full of ghost planes is
      worse than no radar) */
@@ -2444,20 +2462,6 @@ function buildSpots(){
         </div>
       </div>`,
       sub:"USGS LIVE FEED · RINGS = THREE LARGEST"});
-  }
-
-  /* PREDICTION MARKETS — Polymarket top volume: the odds as a news source */
-  if(S.predict.length){
-    spots.push({k:"PREDICTION MARKETS",acc:"var(--purple)",html:true,dur:16000,
-      body:`<div class="pm-wrap">${S.predict.map(m=>{
-        const col=m.yes>=60?"#4ade5b":m.yes>=40?"#ffb400":"#ff5a5a";
-        const vol=m.vol>=1e6?"$"+(m.vol/1e6).toFixed(1)+"M":"$"+Math.round(m.vol/1e3)+"K";
-        return `<div class="pm">
-          <span class="pct" style="color:${col}">${m.yes}%</span>
-          <span class="q">${esc(trimToLen(m.q,80))}</span>
-          <span class="v">${vol} 24H</span></div>`;
-      }).join("")}</div><span class="pg-wm">🎲</span>`,
-      sub:"POLYMARKET · TOP VOLUME · % = YES PRICE"});
   }
 
   /* GLOBAL SITREP — SitDeck-style situation board: world map + wire */
@@ -3188,6 +3192,10 @@ async function fetchTasks(){
   if(location.hash==="#teststandings")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
+      showSpot();},3000);
+  if(location.hash==="#testsitrep")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="GLOBAL SITREP"));
       showSpot();},3000);
   if(location.hash==="#testmarkets")
     setTimeout(()=>{buildSpots();
