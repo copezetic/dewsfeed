@@ -1140,7 +1140,7 @@ function bellChime(){
       const o=ctx.createOscillator(),v=ctx.createGain();
       o.type="sine";o.frequency.value=f;
       v.gain.setValueAtTime(.0001,t0+st);
-      v.gain.linearRampToValueAtTime(.12,t0+st+.03);
+      v.gain.linearRampToValueAtTime(.3,t0+st+.03);
       v.gain.exponentialRampToValueAtTime(.0001,t0+st+d);
       o.connect(v);v.connect(ctx.destination);
       o.start(t0+st);o.stop(t0+st+d+.1);
@@ -1157,7 +1157,7 @@ function chime(kind){
       const o=ctx.createOscillator(),v=ctx.createGain();
       o.type=type||"sine";o.frequency.value=f;
       v.gain.setValueAtTime(0.0001,t0+st);
-      v.gain.linearRampToValueAtTime(g||0.22,t0+st+0.02);
+      v.gain.linearRampToValueAtTime(g||0.45,t0+st+0.02);
       v.gain.exponentialRampToValueAtTime(0.0001,t0+st+d);
       o.connect(v);v.connect(ctx.destination);
       o.start(t0+st);o.stop(t0+st+d+0.05);
@@ -1169,8 +1169,8 @@ function chime(kind){
       tone(1109,0.48,0.65);
     }else{
       // Weather warning: softened EAS-style dual tone, twice
-      tone(853,0.0,0.7,0.14,"square");tone(960,0.0,0.7,0.14,"square");
-      tone(853,0.9,0.7,0.14,"square");tone(960,0.9,0.7,0.14,"square");
+      tone(853,0.0,0.7,0.3,"square");tone(960,0.0,0.7,0.3,"square");
+      tone(853,0.9,0.7,0.3,"square");tone(960,0.9,0.7,0.3,"square");
     }
     setTimeout(()=>ctx.close(),4000);
   }catch(e){}
@@ -1226,6 +1226,14 @@ async function fetchAlerts(){
       const p=watch.properties;
       activeWarning=(p.event||"").toUpperCase()+
         (p.ends?" — until "+new Date(p.ends).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"");
+      // Watches/advisories also take over once (shorter than a warning),
+      // with the alert tone — then persist on the strip.
+      if(!seenAlerts.has(watch.id)){
+        rememberSeen(watch.id);
+        takeover("nws",(p.event||"WEATHER ADVISORY").toUpperCase(),
+          p.headline||p.event||"Weather advisory in effect",
+          (p.areaDesc||"")+" · NATIONAL WEATHER SERVICE",30);
+      }
     }
   }
   if(!$("alert").classList.contains("show")) updateStrip();
@@ -1834,7 +1842,7 @@ function animateVestaboard(){
             f=vbCtx.createBiquadFilter();
       src.buffer=noise;f.type="bandpass";
       f.frequency.value=2200+Math.random()*1200;f.Q.value=1.2;
-      g.gain.value=Math.min(0.28,0.05+n*0.004);   // louder while more flaps move
+      g.gain.value=Math.min(0.5,0.1+n*0.006);   // louder while more flaps move
       src.connect(f);f.connect(g);g.connect(vbCtx.destination);src.start();
     }catch(e){}
   };
