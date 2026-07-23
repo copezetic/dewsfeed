@@ -16,7 +16,7 @@
      Breaking news + NWS warnings take over the full screen.
      ══════════════════════════════════════════════════════════════════ */
   :root{
-    --ground:#07090f; --card:#0b0e17; --edge:#161b2a;
+    --ground:#07090f; --card:#0c101c; --edge:#232c44;
     --ink:#e8ecf4; --ink-dim:#8a93a8; --ink-faint:#4a5164;
     --amber:#ffb400; --cyan:#26d0e0; --blue:#3a7bff; --teal:#18c29c;
     --red:#ff4757; --green:#39d353; --purple:#c46bff; --yellow:#ffd23f;
@@ -175,6 +175,41 @@
   .so-none{font-family:var(--mono);font-size:2.4vh;color:var(--ink-faint);padding:3vh 0}
   .so-f{font-family:var(--mono);font-size:1.6vh;letter-spacing:.16em;color:var(--ink-faint);
     margin-top:2vh}
+  /* Situation deck: dominant night-earth map + intel panels */
+  .sd-wrap{display:flex;gap:1.6vw;width:95vw;height:61vh}
+  .sd-map{flex:1.35;position:relative;background:rgba(5,9,20,.72);
+    border:1px solid rgba(90,150,230,.30);border-radius:1.4vh;padding:.6vh;
+    box-shadow:inset 0 0 6vh rgba(20,60,120,.25),0 0 2.5vh rgba(40,120,200,.12);
+    overflow:hidden}
+  .sd-map svg{display:block;width:100%;height:100%}
+  .sd-map .lbl{position:absolute;left:1vw;top:1.2vh;font-family:var(--mono);
+    font-size:1.7vh;letter-spacing:.22em;color:var(--ink-dim)}
+  .sd-map .utc{position:absolute;right:1vw;bottom:1vh;font-family:var(--mono);
+    font-size:2.4vh;font-weight:800;letter-spacing:.18em;color:var(--cyan);
+    text-shadow:0 0 1.4vh rgba(79,215,232,.5)}
+  .sd-col{flex:1;display:flex;flex-direction:column;gap:1.4vh;min-width:0}
+  .sd-panel{flex:1;background:rgba(8,13,26,.8);border:1px solid rgba(90,150,230,.30);
+    border-radius:1.2vh;padding:1.3vh 1.1vw;overflow:hidden;
+    box-shadow:0 0 2vh rgba(40,120,200,.08)}
+  .sd-ph{font-family:var(--mono);font-size:1.9vh;letter-spacing:.24em;
+    color:var(--ink-dim);margin-bottom:1vh;display:flex;gap:.7vw;align-items:center}
+  .sd-ph b{color:var(--red,#ff4757);font-size:1.6vh}
+  .sd-it{font-size:2vh;font-weight:600;line-height:1.32;padding:.6vh 0;
+    border-bottom:1px solid rgba(120,160,255,.09);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .sd-it:last-child{border-bottom:none}
+  .chip{display:inline-block;font-family:var(--mono);font-size:1.5vh;font-weight:700;
+    padding:.15vh .5vw;border-radius:.4vh;margin-right:.5vw;letter-spacing:.1em;
+    vertical-align:.3vh}
+  .chip.src{background:rgba(79,215,232,.14);color:var(--cyan)}
+  .chip.war{background:rgba(255,71,87,.18);color:#ff7a88}
+  .sd-none{font-family:var(--mono);font-size:2.1vh;color:var(--ink-faint);padding:2vh 0}
+  .sd-tiles{display:flex;gap:1vw;flex:0 0 auto}
+  .sd-t{flex:1;background:rgba(8,13,26,.8);border:1px solid rgba(90,150,230,.30);
+    border-radius:1vh;padding:1vh 1vw;font-family:var(--mono);text-align:center}
+  .sd-t .l{font-size:1.5vh;letter-spacing:.2em;color:var(--ink-faint)}
+  .sd-t .v{font-size:3vh;font-weight:800;margin-top:.2vh;
+    text-shadow:0 0 1.4vh currentColor}
   .mk-panel .row{display:flex;align-items:baseline;gap:1.2vw;margin:.6vh 0}
   .mk-panel .mv{font-family:var(--mono);font-weight:800;font-size:7.5vh;line-height:1;
                 font-variant-numeric:tabular-nums}
@@ -705,7 +740,8 @@
   .pg-wm{color:#e8ecf2}
   .mn-big svg{width:58vh;height:58vh;display:block;
     animation:moonSpin 75s linear infinite;
-    filter:drop-shadow(0 0 26px rgba(232,226,207,.3))}
+    filter:drop-shadow(0 0 30px rgba(232,226,207,.5))
+           drop-shadow(0 0 90px rgba(170,195,255,.22))}
   .mn-strip{display:flex;align-items:center;gap:.7vw}
   .mn-strip svg{width:4.4vh;height:4.4vh;opacity:.5}
   .mn-strip .cur svg{width:6.2vh;height:6.2vh;opacity:1;
@@ -905,14 +941,17 @@
   .wc-wrap{position:relative;z-index:1;display:flex;gap:4.5vw;align-items:flex-start}
   .wc{display:flex;flex-direction:column;align-items:center;gap:1.2vh}
   .wc .face{position:relative;width:22.5vh;height:22.5vh;border-radius:50%;
-            background:radial-gradient(circle at 35% 30%,#232b3d,#131826 70%);
-            border:2.5px solid #3f5677;
+            background:radial-gradient(circle at 35% 30%,#2c364e,#161d2e 70%);
+            border:.45vh solid #6486ba;
             box-shadow:inset 0 .4vh 1.2vh rgba(0,0,0,.55),0 .6vh 3vh rgba(0,0,0,.5),
-              0 0 3vh rgba(80,140,200,.18)}
-  .wc .face.day{background:radial-gradient(circle at 35% 30%,#2a3348,#171d2a 70%);
-            border-color:#3a4a60}
+              0 0 4.5vh rgba(100,160,230,.4)}
+  .wc .face.day{background:radial-gradient(circle at 35% 30%,#344060,#1c2438 70%);
+            border-color:#7d9bce;
+            box-shadow:inset 0 .4vh 1.2vh rgba(0,0,0,.5),0 .6vh 3vh rgba(0,0,0,.5),
+              0 0 5vh rgba(140,190,255,.5)}
   .wc .face i{position:absolute;left:50%;bottom:50%;transform-origin:50% 100%;
-            border-radius:1vh;background:var(--ink)}
+            border-radius:1vh;background:#f2f6ff;
+            box-shadow:0 0 .8vh rgba(160,200,255,.5)}
   .wc .face i.h{width:.9vh;height:4.6vh;margin-left:-.45vh}
   .wc .face i.m{width:.55vh;height:6.8vh;margin-left:-.275vh}
   .wc .face i.s{width:.2vh;height:7.6vh;margin-left:-.1vh;background:var(--amber)}
@@ -1183,7 +1222,8 @@ const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{
           buoy:null, whoop:null, tasks:[], alerts:[], apod:null, art:null,
           quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[],
           predict:[], riaNews:[],
-          launches:[], issPasses:[], curve:null, mort:{}, fx:null, air:null };
+          launches:[], issPasses:[], curve:null, mort:{}, fx:null, air:null,
+          iss:null };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -1416,7 +1456,8 @@ function moonSVG(frac,cls){
   const sweepOuter=waxing?1:0, sweepInner=(t>0)?(waxing?0:1):(waxing?1:0);
   const d=`M50 ${50-r} A${r} ${r} 0 0 ${sweepOuter} 50 ${50+r} A${rx.toFixed(1)} ${r} 0 0 ${sweepInner} 50 ${50-r}Z`;
   return `<svg class="${cls||""}" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="${r}" fill="#161d2c"/>
+    <circle cx="50" cy="50" r="${r}" fill="#232c44"/>
+    <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(205,215,240,.55)" stroke-width="1.3"/>
     <path d="${d}" fill="#e8e2cf"/>
     <g fill="rgba(20,24,36,.16)"><circle cx="38" cy="33" r="6"/><circle cx="61" cy="57" r="9"/>
     <circle cx="45" cy="70" r="4"/><circle cx="66" cy="30" r="3.5"/><circle cx="30" cy="52" r="5"/></g>
@@ -2090,6 +2131,14 @@ async function fetchIssPasses(){
   }catch(e){}
 }
 const azName=a=>["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(((a%360)+360)%360/22.5)%16];
+async function fetchIss(){   // live ISS position marker on the SITREP map
+  try{
+    const u="https://api.wheretheiss.at/v1/satellites/25544";
+    let j=null;
+    try{ j=await jget(u); }catch(e){ if(PROXY_OK) j=await jget(viaProxy(u)); }
+    if(j&&j.latitude!=null)S.iss={lat:j.latitude,lon:j.longitude};
+  }catch(e){}
+}
 
 /* ══════════════ RATE DESK — Treasury curve, mortgages (FRED) + FX ════════ */
 async function fredObs(id,n){   // latest n valid observations, newest first
@@ -2650,24 +2699,95 @@ function buildSpots(){
       sub:"USGS LIVE FEED · RINGS = THREE LARGEST"});
   }
 
-  /* GLOBAL SITREP — SitDeck-style situation board: world map + wire */
+  /* GLOBAL SITREP — full situation deck: night-earth map + intel panels */
   if(S.sitrep&&S.sitrep.length){
-    const dots=S.quakes.slice(0,20).map(q=>{
-      const x=((q.lon+180)/360*640).toFixed(1), y=((90-q.lat)/180*320).toFixed(1);
-      return `<circle cx="${x}" cy="${y}" r="2.5" fill="#ffb400" opacity=".7"/>`;
-    }).join("");
-    spots.push({k:"GLOBAL SITREP",acc:"var(--red,#ff4757)",html:true,dur:16000,
-      body:`<div class="wc-stage">
-        <svg class="wc-map" viewBox="0 0 640 320">
-          <path d="${WORLD_PATH}" fill="rgba(52,82,122,.20)" stroke="rgba(110,160,210,.38)" stroke-width="1"/>
-          ${dots}
-        </svg>
-        <div class="sr-list">${S.sitrep.map(h=>`
-          <div class="sr-h"><span class="b">◈</span><span>${esc(h.t)}</span>
-          ${h.src?`<span class="s">${esc(h.src.toUpperCase())}</span>`:""}</div>`).join("")}
+    const X=lon=>((lon+180)/360*640), Y=lat=>((90-lat)/180*320);
+    // Day/night terminator from the real subsolar point. Night side closes
+    // over the pole opposite the sun's declination (south in NH summer).
+    const now=new Date();
+    const doy=Math.floor((now-new Date(Date.UTC(now.getUTCFullYear(),0,0)))/864e5);
+    const decl=-23.44*Math.cos(2*Math.PI*(doy+10)/365)*Math.PI/180;
+    const subLon=180-(now.getUTCHours()+now.getUTCMinutes()/60)*15;
+    let term="";
+    for(let i=0;i<=72;i++){
+      const lon=-180+i*5, H=(lon-subLon)*Math.PI/180;
+      const phi=Math.atan2(-Math.cos(H),Math.tan(decl))*180/Math.PI;
+      term+=(i?"L":"M")+X(lon).toFixed(1)+" "+Y(phi).toFixed(1)+" ";
+    }
+    const nightY=decl>0?320:0;
+    const night=term+`L640 ${nightY} L0 ${nightY} Z`;
+    // city lights — major metros, warm dots like the night-earth photo
+    const CITIES=[[-74,40.7],[-118.2,34],[-87.6,41.8],[-99.1,19.4],[-74.1,4.7],
+      [-46.6,-23.5],[-58.4,-34.6],[-0.1,51.5],[2.3,48.9],[-3.7,40.4],[13.4,52.5],
+      [12.5,41.9],[31.2,30],[3.4,6.5],[28,-26.2],[37.6,55.8],[29,41],[55.3,25.2],
+      [72.8,19],[77.2,28.6],[103.8,1.35],[106.8,-6.2],[114.2,22.3],[121.5,31.2],
+      [116.4,39.9],[127,37.5],[139.7,35.7],[151.2,-33.9],[-157.9,21.3],[-149.9,61.2]];
+    const lights=CITIES.map(([lo,la])=>
+      `<circle cx="${X(lo).toFixed(1)}" cy="${Y(la).toFixed(1)}" r="1.7" fill="#ffd27a" opacity=".85"/>`).join("");
+    const dots=S.quakes.slice(0,20).map(q=>
+      `<circle cx="${X(q.lon).toFixed(1)}" cy="${Y(q.lat).toFixed(1)}" r="2.6" fill="#ffb400" opacity=".8"/>`).join("");
+    const issMark=S.iss?`<g>
+      <circle cx="${X(S.iss.lon).toFixed(1)}" cy="${Y(S.iss.lat).toFixed(1)}" r="9" fill="none"
+        stroke="#4fd7e8" stroke-width="1.4" opacity=".8"/>
+      <circle cx="${X(S.iss.lon).toFixed(1)}" cy="${Y(S.iss.lat).toFixed(1)}" r="3" fill="#4fd7e8"/>
+      <text x="${(X(S.iss.lon)+13).toFixed(1)}" y="${(Y(S.iss.lat)+4).toFixed(1)}" fill="#4fd7e8"
+        font-size="13" font-family="monospace" font-weight="bold">ISS</text></g>`:"";
+    const grid=[...Array(5)].map((_,i)=>
+      `<line x1="0" y1="${(i+1)*53.3}" x2="640" y2="${(i+1)*53.3}"/>`).join("")+
+      [...Array(11)].map((_,i)=>
+      `<line x1="${(i+1)*53.3}" y1="0" x2="${(i+1)*53.3}" y2="320"/>`).join("");
+    // split the wire: conflict-flavored stories get their own monitor panel
+    const WAR_RE=/(strike|missile|war\b|attack|drone|troop|nuclear|shell|offensiv|invasion|cease ?fire|truce|combat|sanction|militar|weapon|bomb|hostage|front ?line)/i;
+    const conflict=S.sitrep.filter(h=>WAR_RE.test(h.t)).slice(0,3);
+    const wire=S.sitrep.filter(h=>!WAR_RE.test(h.t)).slice(0,3);
+    const item=(h,war)=>{
+      const tag=war?(h.t.match(WAR_RE)||[""])[0].trim().toUpperCase():"";
+      return `<div class="sd-it">
+        ${h.src?`<span class="chip src">${esc(h.src.toUpperCase())}</span>`:""}
+        ${tag?`<span class="chip war">${esc(tag)}</span>`:""}
+        <span>${esc(h.t)}</span></div>`;
+    };
+    const topQ=S.quakes.length?Math.max(...S.quakes.map(q=>q.mag||0)):null;
+    const zulu=now.toISOString().slice(11,16);
+    spots.push({k:"GLOBAL SITREP",acc:"var(--red,#ff4757)",html:true,dur:22000,
+      body:`<div class="sd-wrap">
+        <div class="sd-map">
+          <svg viewBox="0 0 640 330" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <radialGradient id="sdglow" cx="50%" cy="50%" r="55%">
+                <stop offset="62%" stop-color="rgba(30,120,90,0)"/>
+                <stop offset="86%" stop-color="rgba(52,200,140,.13)"/>
+                <stop offset="100%" stop-color="rgba(70,230,170,.28)"/>
+              </radialGradient>
+            </defs>
+            <g transform="translate(0,5)">
+              <ellipse cx="320" cy="160" rx="336" ry="180" fill="url(#sdglow)"/>
+              <g stroke="rgba(90,140,220,.10)" stroke-width="1">${grid}</g>
+              <path d="${WORLD_PATH}" fill="rgba(58,96,150,.42)" stroke="rgba(130,180,235,.55)" stroke-width="1"/>
+              <path d="${night}" fill="rgba(2,5,14,.52)"/>
+              ${lights}${dots}${issMark}
+            </g>
+          </svg>
+          <div class="lbl">LIVE EARTH · TERMINATOR + SEISMIC + ISS</div>
+          <div class="utc">${zulu} ZULU</div>
+        </div>
+        <div class="sd-col">
+          <div class="sd-panel">
+            <div class="sd-ph"><b>⬢</b> CONFLICT MONITOR</div>
+            ${conflict.map(h=>item(h,true)).join("")||'<div class="sd-none">NO CONFLICT-FLAGGED WIRE ITEMS</div>'}
+          </div>
+          <div class="sd-panel">
+            <div class="sd-ph"><b style="color:var(--cyan)">◈</b> GLOBAL WIRE</div>
+            ${wire.map(h=>item(h,false)).join("")}
+          </div>
+          <div class="sd-tiles">
+            ${topQ?`<div class="sd-t"><div class="l">SEISMIC 24H</div><div class="v" style="color:#ffb400">M${topQ.toFixed(1)}</div></div>`:""}
+            ${S.kp!=null?`<div class="sd-t"><div class="l">PLANETARY KP</div><div class="v" style="color:${S.kp>=5?"#ff5a5a":"#4ade5b"}">${S.kp.toFixed(1)}</div></div>`:""}
+            ${flightsFresh()?`<div class="sd-t"><div class="l">AIR TRAFFIC</div><div class="v" style="color:var(--cyan)">${S.flights.length} OVHD</div></div>`:""}
+          </div>
         </div>
       </div>`,
-      sub:"WORLD WIRE · AMBER = SEISMIC EVENTS 24H"});
+      sub:"CONFLICT + WIRE: WORLD NEWS · MAP: LIVE TERMINATOR · USGS · ISS"});
   }
 
   /* AURORA WATCH — planetary Kp gauge */
@@ -3292,7 +3412,7 @@ async function fetchNews(){
   // Google News sports topic — ESPN's own RSS soft-blocks the proxy (200, empty body)
   try{S.sportsNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en")),4);}catch(e){}
   // Global-security wire for the SITREP page (SitDeck-style situation board)
-  try{S.sitrep=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
+  try{S.sitrep=rssTitles(await tget(viaProxy("https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en")),10);}catch(e){}
   // RIA / wealth-management wire
   try{S.riaNews=rssTitles(await tget(viaProxy("https://news.google.com/rss/search?q=%22RIA%22%20OR%20%22registered%20investment%20advisor%22%20wealth%20management&hl=en-US&gl=US&ceid=US:en")),5);}catch(e){}
   buildNewsTicker();
@@ -3369,6 +3489,7 @@ async function fetchTasks(){
   every(fetchPredict,15*60*1000);  // Polymarket top-volume odds
   every(fetchLaunches,60*60*1000); // Launch Library free tier: 15 req/hr
   every(fetchIssPasses,6*60*60*1000);
+  every(fetchIss,5*60*1000);       // ISS marker on the SITREP map
   every(fetchRateDesk,60*60*1000); // FRED daily series — hourly is plenty
   every(fetchFx,60*60*1000);       // ECB reference rates update once a day
   every(fetchAir,30*60*1000);      // AQI + UV tiles on the weather page
@@ -3438,6 +3559,10 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
       showSpot();},3000);
+  if(location.hash==="#testmoon")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="MOON PHASE"));
+      showSpot();},1500);
   if(location.hash==="#testweather")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WEATHER TODAY · DOPPLER"));
