@@ -41,6 +41,10 @@ ALLOWED_HOSTS = {
     "earthquake.usgs.gov",      # live quake feed (Earthquake Watch)
     "services.swpc.noaa.gov",   # planetary Kp index (Aurora Watch)
     "gamma-api.polymarket.com", # prediction-market odds (keyless)
+    "ll.thespacedevs.com",      # Launch Library 2 — upcoming rocket launches
+    "api.g7vrd.co.uk",          # ISS pass predictions over the office
+    "api.frankfurter.dev",      # ECB FX reference rates (keyless)
+    "air-quality-api.open-meteo.com",  # AQI + UV tiles
 }
 UA = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
