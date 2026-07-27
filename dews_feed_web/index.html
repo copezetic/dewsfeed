@@ -253,6 +253,16 @@
   .tt-ln .src{color:var(--ink-faint);font-size:1.7vh;margin-left:.6vw}
   .tt .cur{display:inline-block;width:1.1vw;height:2.4vh;background:#4ade5b;
     vertical-align:text-bottom;animation:blink 1.1s steps(1) infinite}
+  /* Daily horoscope — one card per household sign */
+  .ho-wrap{display:flex;gap:2vw;width:93vw;align-items:stretch}
+  .ho{flex:1;background:var(--card);border:1px solid var(--edge);border-radius:1.4vh;
+    border-top:.5vh solid var(--hc,#b48cff);padding:2.2vh 1.4vw;min-width:0}
+  .ho .g{font-size:8.5vh;line-height:1;color:var(--hc,#b48cff);
+    text-shadow:0 0 3vh var(--hc,#b48cff)}
+  .ho .n{font-family:var(--mono);font-size:2.4vh;font-weight:800;letter-spacing:.3em;
+    color:var(--ink);margin:1.2vh 0 1.4vh}
+  .ho .t{font-size:2.15vh;font-weight:500;line-height:1.5;color:var(--ink);
+    display:-webkit-box;-webkit-line-clamp:9;-webkit-box-orient:vertical;overflow:hidden}
   .mk-panel .row{display:flex;align-items:baseline;gap:1.2vw;margin:.6vh 0}
   .mk-panel .mv{font-family:var(--mono);font-weight:800;font-size:7.5vh;line-height:1;
                 font-variant-numeric:tabular-nums}
@@ -1266,7 +1276,7 @@ const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{
           quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[],
           predict:[], riaNews:[],
           launches:[], issPasses:[], curve:null, mort:{}, fx:null, air:null,
-          iss:null, maNews:[], techNews:[], sciNews:[], hn:[] };
+          iss:null, maNews:[], techNews:[], sciNews:[], hn:[], horo:[] };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -2216,6 +2226,22 @@ async function fetchFx(){
   }catch(e){}
 }
 
+/* ══════════════ DAILY HOROSCOPE — household signs ════════════════════════ */
+const HORO_SIGNS=[["sagittarius","♐","#ffb400"],["gemini","♊","#4fd7e8"],["virgo","♍","#4ade5b"]];
+async function fetchHoro(){
+  const out=[];
+  for(const [sign,glyph,col] of HORO_SIGNS){
+    try{
+      const u=`https://freehoroscopeapi.com/api/v1/get-horoscope/daily?sign=${sign}&day=TODAY`;
+      // API sends no CORS headers — browser can only reach it via the proxy
+      const j=await jget(PROXY_OK?viaProxy(u):u);
+      const txt=j?.data?.horoscope;
+      if(txt)out.push({sign:sign.toUpperCase(),glyph,col,txt});
+    }catch(e){}
+  }
+  if(out.length)S.horo=out;
+}
+
 /* ══════════════ AIR QUALITY + UV — tiles on the weather page ═════════════ */
 async function fetchAir(){
   try{
@@ -2993,6 +3019,16 @@ function buildSpots(){
       </div>
     </div>`, sub:""});
 
+  /* DAILY HOROSCOPE — the household signs, one card each */
+  if(S.horo.length) spots.push({k:"DAILY HOROSCOPE",acc:"var(--purple)",html:true,dur:20000,
+    body:`<div class="ho-wrap">${S.horo.map(h=>`
+      <div class="ho" style="--hc:${h.col}">
+        <div class="g">${h.glyph}</div>
+        <div class="n">${h.sign}</div>
+        <div class="t">${esc(h.txt)}</div>
+      </div>`).join("")}</div><span class="pg-wm">🔮</span>`,
+    sub:"UPDATES DAILY · STARS ARE NOT FINANCIAL ADVICE"});
+
   /* LONG ISLAND SOUND — nautical chart with live blinking buoys */
   bumper("THE HOMEFRONT","⚓","bg-waves","var(--teal)");
   spots.push({k:"LONG ISLAND SOUND",acc:"var(--teal)",html:true,
@@ -3594,6 +3630,7 @@ async function fetchTasks(){
   every(fetchRateDesk,60*60*1000); // FRED daily series — hourly is plenty
   every(fetchFx,60*60*1000);       // ECB reference rates update once a day
   every(fetchAir,30*60*1000);      // AQI + UV tiles on the weather page
+  every(fetchHoro,6*60*60*1000);   // daily horoscope — text changes once a day
   setInterval(()=>{   // ISS heads-up: high pass rising within 10 min, once each
     const p=S.issPasses[0]; if(!p)return;
     const mins=(new Date(p.start)-Date.now())/60000;
@@ -3660,6 +3697,19 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
       showSpot();},3000);
+  if(location.hash==="#testhorofake"){   // offline layout check — canned data
+    S.horo=[
+      {sign:"SAGITTARIUS",glyph:"♐",col:"#ffb400",txt:"Adventure calls today, Sagittarius. A conversation at work opens a door you had written off — walk through it before Friday. Money looks steady; the risk worth taking is social, not financial."},
+      {sign:"GEMINI",glyph:"♊",col:"#4fd7e8",txt:"Your dual nature is an asset today. Balancing two projects feels effortless where others would drop both. An old friend resurfaces with a proposal worth hearing out fully before you decide anything."},
+      {sign:"VIRGO",glyph:"♍",col:"#4ade5b",txt:"Precision pays today, Virgo. The detail everyone else missed is exactly where the problem lives, and you will be the one to find it. Guard an hour of quiet in the afternoon for the finishing touches."}];
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="DAILY HOROSCOPE"));
+      showSpot();},2500);
+  }
+  if(location.hash==="#testhoro")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="DAILY HOROSCOPE"));
+      showSpot();},4000);
   if(location.hash==="#testtechfake"){   // offline layout check — canned data
     S.hn=[{t:"Show HN: I built an LED matrix news wall for my office",pts:412,cm:187},
           {t:"The day the fed funds rate broke my dashboard",pts:256,cm:94},

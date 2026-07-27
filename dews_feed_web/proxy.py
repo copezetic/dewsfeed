@@ -47,6 +47,7 @@ ALLOWED_HOSTS = {
     "air-quality-api.open-meteo.com",  # AQI + UV tiles
     "api.wheretheiss.at",       # ISS position for the SITREP map
     "hacker-news.firebaseio.com",  # HN top stories (tech terminal)
+    "freehoroscopeapi.com",     # daily horoscope page
 }
 UA = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
