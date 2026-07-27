@@ -9320,6 +9320,11 @@ void showSplash(){
     splashRow(37, "OTA",  "skipped",  3);
     splashRow(45, "DATA", "skipped",  3);
     splashFooter("offline mode");
+    // Start TZ + SNTP even with no link: ensureWifi() keeps retrying in
+    // loop(), and the background SNTP client syncs the moment a link
+    // appears. Without this an offline boot free-runs from the 1970 epoch
+    // and the clock shows garbage (e.g. "11:28 PM") until a manual reboot.
+    configTzTime("EST5EDT,M3.2.0/2,M11.1.0/2", "pool.ntp.org", "time.nist.gov");
     delay(2000);
     splashReveal();   // still show big DEWS FEED so it boots cleanly
     return;
@@ -9798,6 +9803,20 @@ void loop(){
 
   // ── OTA: handle pending firmware uploads. Returns immediately if none.
   if(WiFi.status()==WL_CONNECTED) ArduinoOTA.handle();
+
+  // ── Clock sanity: if NTP never landed (offline boot, DNS hiccup) the
+  // clock free-runs from the 1970 epoch and every time display is garbage.
+  // Re-kick SNTP every 5 min until localtime shows a believable year.
+  static unsigned long lastTimeKick=0;
+  if(now-lastTimeKick>300000UL){
+    lastTimeKick=now;
+    time_t tnow=time(nullptr);
+    struct tm tchk; localtime_r(&tnow,&tchk);
+    if(tchk.tm_year+1900<2020 && WiFi.status()==WL_CONNECTED){
+      Serial.println("[TIME] epoch clock detected — restarting SNTP");
+      configTzTime("EST5EDT,M3.2.0/2,M11.1.0/2","pool.ntp.org","time.nist.gov");
+    }
+  }
 
   // ── Daily reboot at 4:00am (router-style stability).
   // ESP32 String allocations from JSON parsing fragment the heap over weeks;
