@@ -320,7 +320,7 @@
          font-size:26vh;opacity:.09;pointer-events:none;line-height:1}
 
   /* ── commute mini-maps ── */
-  .cm-map{display:block;margin-top:1.6vh;width:26vw;border-radius:1.2vh;
+  .cm-map{display:block;margin-top:1.4vh;width:100%;border-radius:1vh;
           border:1px solid var(--edge)}
   /* car cruises under the drive times (emoji faces left → right-to-left) */
   .cm-road{position:relative;margin-top:2.4vh;height:6.5vh;width:70vw;overflow:hidden}
@@ -769,7 +769,9 @@
   .introed .tr{animation-delay:calc(4.4s + var(--i,0)*.12s)}
   .introed .tr-track .tr-anim{animation-delay:4.7s}
   .cm{animation:riseIn .55s 4.3s both}
-  .cm:nth-child(2){animation-delay:4.5s}
+  .cm:nth-child(2){animation-delay:4.45s}
+  .cm:nth-child(3){animation-delay:4.6s}
+  .cm:nth-child(4){animation-delay:4.75s}
   .cm-road{animation:riseIn .5s 4.7s both}
   .cm-road .cm-anim{animation-delay:4.8s}
   .wt-stage{position:relative}
@@ -1018,11 +1020,14 @@
   .wc .sub{font-family:var(--mono);font-size:2.2vh;color:var(--ink-faint)}
 
   /* ── COMMUTE ── */
-  .cm-wrap{display:flex;gap:6vw;font-family:var(--mono)}
-  .cm .l{font-size:2.6vh;letter-spacing:.25em;color:var(--ink-dim)}
-  .cm .v{font-weight:800;font-size:11vh;line-height:1.1;color:var(--cyan);
-         font-variant-numeric:tabular-nums}
-  .cm .n{font-size:2.6vh;color:var(--ink-faint);margin-top:.5vh}
+  .cm-wrap{display:flex;gap:1.6vw;font-family:var(--mono);width:93vw}
+  .cm{flex:1;min-width:0;background:var(--card);border:1px solid var(--edge);
+      border-top:.5vh solid var(--cc,var(--cyan));border-radius:1.2vh;
+      padding:1.6vh 1vw;text-align:center}
+  .cm .l{font-size:2.2vh;letter-spacing:.25em;color:var(--ink-dim)}
+  .cm .v{font-weight:800;font-size:7vh;line-height:1.15;color:var(--cc,var(--cyan));
+         font-variant-numeric:tabular-nums;text-shadow:0 0 2vh var(--cc,var(--cyan))}
+  .cm .n{font-size:2vh;color:var(--ink-faint);margin-top:.4vh;letter-spacing:.15em}
 
   /* ── WHOOP recovery page ── */
   .wh-wrap{display:flex;align-items:center;gap:5vw}
@@ -1117,6 +1122,12 @@
   .aq .v{font-size:6vh;font-weight:800;color:var(--c);line-height:1.1;
          text-shadow:0 0 1.6vh var(--c)}
   .aq .s{font-size:1.8vh;letter-spacing:.14em;color:var(--ink)}
+  /* national radar page */
+  .usr-wrap{display:flex;flex-direction:column;align-items:center;gap:1.2vh}
+  .usr-img{height:58vh;max-width:92vw;object-fit:contain;background:#0a0e18;
+    border:1px solid var(--edge);border-radius:1.2vh}
+  .usr-lbl{font-family:var(--mono);font-size:1.8vh;letter-spacing:.22em;
+    color:var(--ink-dim)}
 
   /* ── 7-DAY WEATHER ── */
   .wk-wrap{display:flex;gap:1.6vw}
@@ -1564,20 +1575,37 @@ train:`<svg class="wire" viewBox="0 0 430 100">
   <line x1="10" y1="78" x2="424" y2="78"/>
   ${[50,92,196,244,326,374].map(x=>`<g class="wh" style="transform-origin:${x}px 86px"><circle cx="${x}" cy="86" r="9"/><line x1="${x}" y1="77" x2="${x}" y2="95"/><line x1="${x-9}" y1="86" x2="${x+9}" y2="86"/></g>`).join("")}
   </g></svg>`,
-jeep:`<svg class="wire" viewBox="0 0 300 130">
+jeep:`<svg class="wire" viewBox="0 0 320 130">
   <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
-  <path d="M20 92 V32 Q20 25 28 25 L190 25 L214 45 L272 47 Q286 49 286 62 V92 Z"/>
-  <line x1="30" y1="17" x2="186" y2="17"/>
-  <line x1="42" y1="17" x2="42" y2="25"/><line x1="174" y1="17" x2="174" y2="25"/>
-  <rect x="30" y="31" width="152" height="16" rx="2"/>
-  <line x1="82" y1="31" x2="82" y2="47"/><line x1="134" y1="31" x2="134" y2="47"/>
-  <path d="M188 28 L211 45 L188 45 Z"/>
-  <rect x="26" y="56" width="252" height="22" rx="3"/>
-  ${[36,64,92,120,148,176,204,232,258].map(x=>`<line x1="${x}" y1="77" x2="${x+13}" y2="57" opacity=".55"/>`).join("")}
-  <rect x="270" y="50" width="14" height="11" rx="2"/>
-  <line x1="274" y1="50" x2="274" y2="61"/><line x1="279" y1="50" x2="279" y2="61"/>
-  <g class="wh" style="transform-origin:80px 96px"><circle cx="80" cy="96" r="16"/><line x1="80" y1="80" x2="80" y2="112"/><line x1="64" y1="96" x2="96" y2="96"/></g>
-  <g class="wh" style="transform-origin:232px 96px"><circle cx="232" cy="96" r="16"/><line x1="232" y1="80" x2="232" y2="112"/><line x1="216" y1="96" x2="248" y2="96"/></g>
+  <!-- Grand Wagoneer profile: long flat hood, upright cabin, boxy tail -->
+  <path d="M18 92 V34 Q18 26 26 26 L188 26 L210 46 L294 46 Q302 46 302 55 V92 Z"/>
+  <!-- roof rack: rails + posts -->
+  <line x1="32" y1="18" x2="182" y2="18"/>
+  <line x1="44" y1="18" x2="44" y2="26"/><line x1="108" y1="18" x2="108" y2="26"/>
+  <line x1="170" y1="18" x2="170" y2="26"/>
+  <!-- 4-pane glasshouse: 2 doors + cargo + quarter -->
+  <rect x="28" y="32" width="156" height="15" rx="2"/>
+  <line x1="70" y1="32" x2="70" y2="47"/><line x1="116" y1="32" x2="116" y2="47"/>
+  <line x1="158" y1="32" x2="158" y2="47"/>
+  <!-- raked windshield -->
+  <path d="M190 29 L208 45 L190 45 Z"/>
+  <!-- woodgrain side panel with lighter surround trim -->
+  <rect x="24" y="56" width="264" height="24" rx="3"/>
+  <rect x="28" y="59" width="256" height="18" rx="2" opacity=".45"/>
+  ${[38,66,94,122,150,178,206,234,262].map(x=>`<line x1="${x}" y1="76" x2="${x+13}" y2="60" opacity=".5"/>`).join("")}
+  <!-- door handles -->
+  <line x1="88" y1="52" x2="98" y2="52"/><line x1="140" y1="52" x2="150" y2="52"/>
+  <!-- front: round headlight + vertical grille slats -->
+  <circle cx="295" cy="55" r="4.5"/>
+  <line x1="288" y1="62" x2="288" y2="74" opacity=".7"/>
+  <line x1="293" y1="62" x2="293" y2="74" opacity=".7"/>
+  <line x1="298" y1="62" x2="298" y2="74" opacity=".7"/>
+  <!-- chrome bumpers + tail lamp -->
+  <rect x="298" y="82" width="18" height="8" rx="2"/>
+  <rect x="4" y="82" width="18" height="8" rx="2"/>
+  <rect x="18" y="47" width="5" height="8" rx="1"/>
+  <g class="wh" style="transform-origin:78px 96px"><circle cx="78" cy="96" r="16"/><line x1="78" y1="80" x2="78" y2="112"/><line x1="62" y1="96" x2="94" y2="96"/></g>
+  <g class="wh" style="transform-origin:246px 96px"><circle cx="246" cy="96" r="16"/><line x1="246" y1="80" x2="246" y2="112"/><line x1="230" y1="96" x2="262" y2="96"/></g>
   </g></svg>`,
 tornado:`<svg class="wire" viewBox="0 0 200 165">
   ${[[100,26,76,15],[100,50,59,13],[98,72,44,11],[94,92,31,9],[90,110,20,7],[87,126,11,5],[85,141,5,3]].map((e,i)=>`<ellipse class="tw" style="animation-delay:${(-i*.3).toFixed(1)}s" cx="${e[0]}" cy="${e[1]}" rx="${e[2]}" ry="${e[3]}" fill="none" stroke="currentColor" stroke-width="${(4-i*.4).toFixed(1)}" opacity="${(.85-i*.09).toFixed(2)}"/>`).join("")}
@@ -2755,6 +2783,15 @@ function buildSpots(){
     </div></div>`,
     sub:"NEXT 10 HOURS · RADAR: NWS KOKX (NY METRO), LIVE LOOP"});
 
+  /* US RADAR — full national CONUS mosaic loop */
+  spots.push({k:"US RADAR · NATIONAL",acc:"var(--cyan)",html:true,dur:16000,
+    body:`<div class="usr-wrap">
+      <img class="usr-img" alt="US radar" onerror="this.style.display='none'"
+        src="https://radar.weather.gov/ridge/standard/CONUS_loop.gif?${Math.floor(Date.now()/600000)}">
+      <div class="usr-lbl">CONUS COMPOSITE · NWS RIDGE · LIVE LOOP</div>
+    </div>`,
+    sub:"NATIONAL RADAR MOSAIC · UPDATES EVERY ~2 MIN"});
+
   /* 7-DAY WEATHER */
   if(S.forecast.length) spots.push({k:"GREENWICH · 7-DAY",acc:"var(--cyan)",html:true,
     body:`<div class="wk-wrap">${S.forecast.map((d,i)=>`
@@ -3049,11 +3086,16 @@ function buildSpots(){
     spots.push({k:"DRIVE TIMES FROM OFFICE",acc:"var(--yellow)",html:true,dur:16000,
       body:`<div class="intro intro-jeep"><span class="ijp">${VEH.jeep}${VEH.reticle}
         <b class="tlm">ASSET WAGONEER · ETA HOME ${esc(S.traffic.home.toUpperCase())}</b></span></div>
-      <div class="cm-wrap">
-        <div class="cm"><div class="l">HOME</div><div class="v">${esc(S.traffic.home)}</div><div class="n">STAMFORD</div>
-          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(CFG.homeAddr)}"></div>
-        <div class="cm"><div class="l">THE LAKE</div><div class="v">${esc(S.traffic.lake)}</div><div class="n">WALLENPAUPACK</div>
-          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(CFG.lake.lat+","+CFG.lake.lon)}"></div>
+      <div class="cm-wrap">${[
+        ["HOME",S.traffic.home,"STAMFORD","var(--amber)",CFG.homeAddr],
+        ["THE LAKE",S.traffic.lake,"WALLENPAUPACK","var(--teal)",CFG.lake.lat+","+CFG.lake.lon],
+        ["WOODSIDE",S.traffic.woodside,"QUEENS NY","var(--cyan)","Woodside, Queens, NY"],
+        ["SHELTON",S.traffic.shelton,"CONNECTICUT","var(--green)","Shelton, CT"],
+      ].filter(d=>d[1]).map(([l,v,n,c,dest])=>`
+        <div class="cm" style="--cc:${c}">
+          <div class="l">${l}</div><div class="v">${esc(v)}</div><div class="n">${n}</div>
+          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(dest)}">
+        </div>`).join("")}
       </div>
       <div class="cm-road"><span class="cm-anim">${VEH.jeep}</span></div>`,
       sub:S.traffic.live?"LIVE TRAFFIC · GOOGLE MAPS"
@@ -3154,7 +3196,7 @@ function bgFor(k){
   if(/MARKET|FED|BANKING|PREDICTION|RIA|RATE DESK|M&A|TECH/.test(k)) return "bg-grid";
   if(/^(MLB|NBA|NHL|NFL|NCAAB|WC|EPL)\b/.test(k)) return "bg-field";
   if(/GET IT DONE|PAINTING/.test(k)) return "bg-beams";
-  if(/WEATHER|7-DAY/.test(k)) return "bg-sky "+wxClass();
+  if(/WEATHER|7-DAY|US RADAR/.test(k)) return "bg-sky "+wxClass();
   if(/FLIGHTS/.test(k)) return "bg-contrails";
   if(/METRO-NORTH/.test(k)) return "bg-rails";
   if(/DRIVE TIMES/.test(k)) return "bg-road";
@@ -3509,10 +3551,15 @@ async function fetchTraffic(){
     return m>=60?Math.floor(m/60)+"h "+(m%60)+"m":m+"m";
   };
   try{
-    S.traffic={home:await gm(CFG.homeAddr), lake:await gm(CFG.lake.addr), live:true};
+    S.traffic={home:await gm(CFG.homeAddr), lake:await gm(CFG.lake.addr),
+               woodside:await gm("Woodside, Queens, NY"),
+               shelton:await gm("Shelton, CT"), live:true};
   }catch(e){
     try{S.traffic={home:await osrm(CFG.home.lat,CFG.home.lon),
-                   lake:await osrm(CFG.lake.lat,CFG.lake.lon), live:false};}catch(e2){}
+                   lake:await osrm(CFG.lake.lat,CFG.lake.lon),
+                   woodside:await osrm(40.7454,-73.9022),   // coworker commutes
+                   shelton:await osrm(41.3165,-73.0932),
+                   live:false};}catch(e2){}
   }
 }
 const trimToLen=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
@@ -3706,6 +3753,10 @@ async function fetchTasks(){
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="DAILY HOROSCOPE"));
       showSpot();},2500);
   }
+  if(location.hash==="#testdrive")   // traffic = up to 8 sequential fetches
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="DRIVE TIMES FROM OFFICE"));
+      showSpot();},7000);
   if(location.hash==="#testhoro")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="DAILY HOROSCOPE"));
@@ -3741,6 +3792,10 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="MOON PHASE"));
       showSpot();},1500);
+  if(location.hash==="#testusradar")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="US RADAR · NATIONAL"));
+      showSpot();},2000);
   if(location.hash==="#testweather")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WEATHER TODAY · DOPPLER"));
