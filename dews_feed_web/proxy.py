@@ -49,6 +49,51 @@ ALLOWED_HOSTS = {
     "hacker-news.firebaseio.com",  # HN top stories (tech terminal)
     "freehoroscopeapi.com",     # daily horoscope page
 }
+# ── Wall radio ("DEWS FM") ─────────────────────────────────────────────
+# Curated keyless streams the dashboard's <audio> element can play directly.
+# State lives here so the phone (via Tailscale) and the dashboard (localhost)
+# see the same switch. Defaults to OFF on every proxy restart so a reboot
+# never starts blasting music into the office unasked.
+STATIONS = [
+    ("Groove Salad — ambient beats",       "https://ice1.somafm.com/groovesalad-256-mp3"),
+    ("Secret Agent — spy-movie lounge",    "https://ice1.somafm.com/secretagent-128-mp3"),
+    ("DEF CON Radio — hacker electronic",  "https://ice1.somafm.com/defcon-128-mp3"),
+    ("Radio Paradise — eclectic rock",     "https://stream.radioparadise.com/mp3-192"),
+    ("RP Mellow — chill mix",              "https://stream.radioparadise.com/mellow-192"),
+]
+MUSIC = {"on": False, "i": 0}
+
+MUSIC_UI = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DEWS FM</title><style>
+body{background:#0b0e17;color:#e8ecf2;font-family:ui-monospace,Menlo,monospace;
+     margin:0;padding:24px;max-width:480px}
+h1{font-size:20px;letter-spacing:.25em;color:#ffb400;margin:0 0 4px}
+p{color:#7a8699;font-size:12px;letter-spacing:.1em;margin:0 0 20px}
+button{display:block;width:100%;margin:10px 0;padding:16px;border-radius:10px;
+       border:1px solid #232c44;background:#111624;color:#e8ecf2;font-size:15px;
+       font-family:inherit;text-align:left;cursor:pointer}
+button.on{border-color:#4ade5b;color:#4ade5b;box-shadow:0 0 14px rgba(74,222,91,.25)}
+#pwr{font-size:18px;font-weight:700;text-align:center;letter-spacing:.2em}
+#pwr.playing{background:#12240f;border-color:#4ade5b;color:#4ade5b}
+</style></head><body>
+<h1>DEWS FM</h1><p>OFFICE WALL RADIO · TOGGLE FROM ANYWHERE ON THE TAILNET</p>
+<button id="pwr" onclick="hit(st.on?'/music/off':'/music/on')">…</button>
+<div id="list"></div>
+<script>
+let st={on:false,i:0};
+async function refresh(){
+  st=await (await fetch('/music')).json();
+  document.getElementById('pwr').textContent=st.on?'■ STOP':'► PLAY';
+  document.getElementById('pwr').className=st.on?'playing':'';
+  document.getElementById('list').innerHTML=st.stations.map((s,i)=>
+    `<button class="${i===st.i?'on':''}" onclick="hit('/music/set?i=${i}')">`+
+    `${i===st.i?'▶ ':''}${s}</button>`).join('');
+}
+async function hit(p){await fetch(p);refresh();}
+refresh();setInterval(refresh,5000);
+</script></body></html>"""
+
 UA = ("Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 # Planespotters 403s browser-like UAs; their API wants one that identifies
@@ -79,10 +124,41 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.end_headers()
 
+    def _local(self):
+        # The relay + tasks stay localhost-only; the music switch is the one
+        # thing the phone may reach now that we bind beyond loopback.
+        return self.client_address[0] in ("127.0.0.1", "::1")
+
     def do_GET(self):
         if self.path.startswith("/ping"):
             self._cors()
             self.wfile.write(b"ok")
+            return
+        if self.path.startswith("/music"):
+            import json as _json
+            p = urllib.parse.urlparse(self.path)
+            if p.path == "/music/ui":
+                self._cors(200, "text/html; charset=utf-8")
+                self.wfile.write(MUSIC_UI.encode())
+                return
+            if p.path == "/music/on":  MUSIC["on"] = True
+            if p.path == "/music/off": MUSIC["on"] = False
+            if p.path == "/music/next": MUSIC["i"] = (MUSIC["i"]+1) % len(STATIONS)
+            if p.path == "/music/set":
+                try:
+                    i = int(urllib.parse.parse_qs(p.query).get("i", ["0"])[0])
+                    if 0 <= i < len(STATIONS): MUSIC["i"] = i
+                except Exception:
+                    pass
+            name, url = STATIONS[MUSIC["i"]]
+            self._cors(200, "application/json")
+            self.wfile.write(_json.dumps({
+                "on": MUSIC["on"], "i": MUSIC["i"], "name": name, "url": url,
+                "stations": [s[0] for s in STATIONS]}).encode())
+            return
+        if not self._local():
+            self._cors(403)
+            self.wfile.write(b"music endpoints only from off-box")
             return
         if self.path.startswith("/tasks"):
             try:

@@ -1128,6 +1128,20 @@
     border:1px solid var(--edge);border-radius:1.2vh}
   .usr-lbl{font-family:var(--mono);font-size:1.8vh;letter-spacing:.22em;
     color:var(--ink-dim)}
+  /* DEWS FM on-air chip */
+  #musicChip{position:fixed;right:1.2vw;bottom:13.5vh;z-index:60;
+    display:flex;align-items:center;gap:.8vw;
+    background:rgba(10,16,12,.85);border:1px solid rgba(74,222,91,.4);
+    border-radius:1vh;padding:.9vh 1vw;font-family:var(--mono);
+    font-size:1.9vh;letter-spacing:.14em;color:#4ade5b;
+    box-shadow:0 0 2vh rgba(74,222,91,.18)}
+  #musicChip .eq{display:flex;align-items:flex-end;gap:.25vw;height:2.2vh}
+  #musicChip .eq i{width:.45vw;background:#4ade5b;border-radius:.2vh;
+    animation:eqB 1s ease-in-out infinite}
+  #musicChip .eq i:nth-child(1){height:60%;animation-delay:0s}
+  #musicChip .eq i:nth-child(2){height:100%;animation-delay:.25s}
+  #musicChip .eq i:nth-child(3){height:75%;animation-delay:.5s}
+  @keyframes eqB{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
 
   /* ── 7-DAY WEATHER ── */
   .wk-wrap{display:flex;gap:1.6vw}
@@ -1239,6 +1253,12 @@
   <div id="alertKicker">ALERT</div>
   <div id="alertBody"></div>
   <div id="alertSub"></div>
+</div>
+
+<!-- DEWS FM on-air chip — visible only while the wall radio is playing -->
+<div id="musicChip" style="display:none">
+  <span class="eq"><i></i><i></i><i></i></span>
+  <span id="musicName"></span>
 </div>
 
 <script src="secrets.js"></script>
@@ -2268,6 +2288,29 @@ async function fetchHoro(){
     }catch(e){}
   }
   if(out.length)S.horo=out;
+}
+
+/* ══════════════ DEWS FM — wall radio, toggled via the proxy switch ═══════ */
+// The proxy holds the on/off + station state (see /music endpoints there);
+// the phone flips the switch, this poll notices within 5s and obeys. The
+// kiosk launches with autoplay allowed, so play() needs no user gesture.
+const radioEl=new Audio(); radioEl.volume=.85;
+async function pollMusic(){
+  if(!PROXY_OK)return;
+  try{
+    const j=await jget(CFG.proxy+"/music");
+    const chip=$("musicChip");
+    if(j.on&&j.url){
+      if(!radioEl.src.startsWith(j.url)){ radioEl.src=j.url; }
+      if(radioEl.paused){ try{ await radioEl.play(); }catch(e){} }
+      $("musicName").textContent=j.name.split("—")[0].trim().toUpperCase();
+      chip.style.display="flex";
+    }else{
+      if(!radioEl.paused)radioEl.pause();
+      if(radioEl.src){ radioEl.removeAttribute("src"); radioEl.load(); }
+      chip.style.display="none";
+    }
+  }catch(e){}
 }
 
 /* ══════════════ AIR QUALITY + UV — tiles on the weather page ═════════════ */
@@ -3678,6 +3721,7 @@ async function fetchTasks(){
   every(fetchFx,60*60*1000);       // ECB reference rates update once a day
   every(fetchAir,30*60*1000);      // AQI + UV tiles on the weather page
   every(fetchHoro,6*60*60*1000);   // daily horoscope — text changes once a day
+  setInterval(pollMusic,5000);     // DEWS FM switch — phone toggles, wall obeys
   setInterval(()=>{   // ISS heads-up: high pass rising within 10 min, once each
     const p=S.issPasses[0]; if(!p)return;
     const mins=(new Date(p.start)-Date.now())/60000;
