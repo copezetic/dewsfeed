@@ -127,7 +127,7 @@ struct BuoyDef;
 struct MiniAid;
 struct RouteCacheEntry;
 void fetchWeather(float lat, float lon, WeatherData &wx);
-void fetchTraffic(const char* dest, TrafficData &td);
+void fetchTraffic(float dlat, float dlon, TrafficData &td);
 
 // =====================================================================
 // PANEL CONFIG
@@ -201,6 +201,8 @@ uint16_t C_BLACK, C_WHITE, C_GRAY, C_DARKGRAY, C_RED, C_GREEN, C_BLUE,
 #define CABIN_LON       -75.2167f
 #define HOME_ADDR        "299+Red+Fox+Rd+Stamford+CT+06903"
 #define WORK_ADDR        "100+Mason+St+Greenwich+CT"
+#define WORK_LAT         41.0262f
+#define WORK_LON        -73.6255f
 #define CABIN_ADDR       "1133+Indian+Dr+Lake+Ariel+PA+18436"
 #define NWS_HOME_ZONE    "CTZ009"
 #define NWS_MARINE_ZONE  "ANZ332"
@@ -1911,24 +1913,27 @@ void fetchWeather(float lat, float lon, WeatherData &wx) {
 }
 
 // --- Traffic ---
-void fetchTraffic(const char* dest, TrafficData &td) {
-  // Origin is the actual house at 299 Red Fox Rd (north Stamford),
-  // not the downtown Stamford lat/lon — driving distance is materially longer.
-  String url="https://maps.googleapis.com/maps/api/distancematrix/json?origins=";
-  url+=String(HOME_ADDR);
-  url+="&destinations="+String(dest);
-  url+="&departure_time=now&key="+String(GMAPS_API_KEY);
+// OSRM public router (keyless, free). Google Distance Matrix with
+// departure_time=now bills on the "Advanced" SKU and was costing real money
+// (~$48/mo across the panel + the office Pi) — typical drive time is fine
+// for an ambient display. No key, no billing, no live-traffic delta.
+void fetchTraffic(float dlat, float dlon, TrafficData &td) {
+  String url="https://router.project-osrm.org/route/v1/driving/";
+  url+=String(HOME_LON,4)+","+String(HOME_LAT,4)+";";
+  url+=String(dlon,4)+","+String(dlat,4)+"?overview=false";
   String body=httpGet(url); if(body.isEmpty()) return;
-  DynamicJsonDocument doc(8192);
+  DynamicJsonDocument doc(2048);
   if(deserializeJson(doc,body)) return;
-  JsonObject elem=doc["rows"][0]["elements"][0];
-  if(elem["status"].as<String>()=="OK") {
-    td.durationNormal =elem["duration"]["text"].as<String>();
-    td.durationTraffic=elem["duration_in_traffic"]["text"].as<String>();
-    td.valid=true;
-    Serial.printf("[TRAFFIC] normal=%s traffic=%s\n",
-                  td.durationNormal.c_str(),td.durationTraffic.c_str());
-  }
+  float secs=doc["routes"][0]["duration"] | 0.0f;
+  if(secs<=0) return;
+  int m=(int)(secs/60.0f+0.5f);
+  char buf[16];
+  if(m>=60) snprintf(buf,16,"%dh %02dm",m/60,m%60);
+  else      snprintf(buf,16,"%dm",m);
+  td.durationNormal =String(buf);
+  td.durationTraffic=String(buf);   // no live-traffic delta on OSRM
+  td.valid=true;
+  Serial.printf("[TRAFFIC] osrm %s\n", buf);
 }
 
 // --- Marine ---
@@ -9716,8 +9721,8 @@ void setup(){
   showSplash();   // ← does WiFi connect + 7 fetches; can take 30-60s
 
   // Post-splash fetches
-  fetchTraffic(WORK_ADDR, trafficWork);
-  fetchTraffic(CABIN_ADDR, trafficCabin);
+  fetchTraffic(WORK_LAT, WORK_LON, trafficWork);
+  fetchTraffic(CABIN_LAT, CABIN_LON, trafficCabin);
   fetchLake();
   fetchWhoop();
   fetchCalendar();
@@ -9872,8 +9877,8 @@ void loop(){
     else if(now-lastSP500Spark>900000UL && ESP.getFreeHeap()>60000) {fetchSP500Sparkline(); lastSP500Spark=now;}
     else if(now-lastHomeWx   >REFRESH_WEATHER) {fetchWeather(HOME_LAT,HOME_LON,homeWx);lastHomeWx=now;}
     else if(now-lastCabinWx  >REFRESH_WEATHER) {fetchWeather(CABIN_LAT,CABIN_LON,cabinWx);lastCabinWx=now;}
-    else if(now-lastTrafficW >REFRESH_TRAFFIC) {fetchTraffic(WORK_ADDR,trafficWork);lastTrafficW=now;}
-    else if(now-lastTrafficC >REFRESH_TRAFFIC) {fetchTraffic(CABIN_ADDR,trafficCabin);lastTrafficC=now;}
+    else if(now-lastTrafficW >REFRESH_TRAFFIC) {fetchTraffic(WORK_LAT,WORK_LON,trafficWork);lastTrafficW=now;}
+    else if(now-lastTrafficC >REFRESH_TRAFFIC) {fetchTraffic(CABIN_LAT,CABIN_LON,trafficCabin);lastTrafficC=now;}
     else if(now-lastFlights  >REFRESH_FLIGHTS) {fetchFlights();  lastFlights=now;
       // Resolve any new callsigns immediately after fetch — keeps display fresh
       lastFlightRoutes=0;

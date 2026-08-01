@@ -320,8 +320,15 @@
          font-size:26vh;opacity:.09;pointer-events:none;line-height:1}
 
   /* ── commute mini-maps ── */
-  .cm-map{display:block;margin-top:1.4vh;width:100%;border-radius:1vh;
-          border:1px solid var(--edge)}
+  /* little route strip at the bottom of each drive-time card: a line from
+     the office out to a destination dot in the card's accent color */
+  .cm .rt{position:relative;height:1.6vh;margin-top:1.8vh}
+  .cm .rt i{position:absolute;left:6%;right:14%;top:50%;height:2px;
+    background:linear-gradient(90deg,var(--ink-faint),var(--cc,var(--cyan)));
+    opacity:.7}
+  .cm .rt b{position:absolute;right:8%;top:50%;transform:translate(50%,-50%);
+    font-size:1.2vh;color:var(--cc,var(--cyan));
+    text-shadow:0 0 1vh var(--cc,var(--cyan))}
   /* car cruises under the drive times (emoji faces left → right-to-left) */
   .cm-road{position:relative;margin-top:2.4vh;height:6.5vh;width:70vw;overflow:hidden}
   .cm-road::after{content:"";position:absolute;left:0;right:0;bottom:1vh;height:.35vh;
@@ -3114,35 +3121,24 @@ function buildSpots(){
   spots.push({k:"LONG ISLAND SOUND",acc:"var(--teal)",html:true,
     body:lisChartHTML(), sub:"BUOYS BLINK AT REAL NOAA FLASH PERIODS · DATA: NDBC 44025"});
 
-  /* COMMUTE — with dark-styled Static Maps minis (office = amber pin) */
+  /* COMMUTE — OSRM typical drive times (Google Maps dropped: it was billing) */
   if(S.traffic){
-    const mapStyle="&style=feature:all%7Celement:geometry%7Ccolor:0x141b28"+
-      "&style=feature:all%7Celement:labels.text.fill%7Ccolor:0x7a8699"+
-      "&style=feature:all%7Celement:labels.text.stroke%7Ccolor:0x0b0f16"+
-      "&style=feature:water%7Celement:geometry%7Ccolor:0x0b1420"+
-      "&style=feature:road%7Celement:geometry%7Ccolor:0x2a3548"+
-      "&style=feature:poi%7Celement:labels%7Cvisibility:off";
-    const miniMap=dest=>`https://maps.googleapis.com/maps/api/staticmap?size=520x260`+
-      `&markers=color:orange%7C${CFG.office.lat},${CFG.office.lon}`+
-      `&markers=color:red%7C${encodeURIComponent(dest)}`+
-      mapStyle+`&key=${CFG.gmapsKey}`;
     spots.push({k:"DRIVE TIMES FROM OFFICE",acc:"var(--yellow)",html:true,dur:16000,
       body:`<div class="intro intro-jeep"><span class="ijp">${VEH.jeep}${VEH.reticle}
         <b class="tlm">ASSET WAGONEER · ETA HOME ${esc(S.traffic.home.toUpperCase())}</b></span></div>
       <div class="cm-wrap">${[
-        ["HOME",S.traffic.home,"STAMFORD","var(--amber)",CFG.homeAddr],
-        ["THE LAKE",S.traffic.lake,"WALLENPAUPACK","var(--teal)",CFG.lake.lat+","+CFG.lake.lon],
-        ["WOODSIDE",S.traffic.woodside,"QUEENS NY","var(--cyan)","Woodside, Queens, NY"],
-        ["SHELTON",S.traffic.shelton,"CONNECTICUT","var(--green)","Shelton, CT"],
-      ].filter(d=>d[1]).map(([l,v,n,c,dest])=>`
+        ["HOME",S.traffic.home,"STAMFORD","var(--amber)"],
+        ["THE LAKE",S.traffic.lake,"WALLENPAUPACK","var(--teal)"],
+        ["WOODSIDE",S.traffic.woodside,"QUEENS NY","var(--cyan)"],
+        ["SHELTON",S.traffic.shelton,"CONNECTICUT","var(--green)"],
+      ].filter(d=>d[1]).map(([l,v,n,c])=>`
         <div class="cm" style="--cc:${c}">
           <div class="l">${l}</div><div class="v">${esc(v)}</div><div class="n">${n}</div>
-          <img class="cm-map" alt="" onerror="this.style.display='none'" src="${miniMap(dest)}">
+          <div class="rt"><i></i><b>⬤</b></div>
         </div>`).join("")}
       </div>
       <div class="cm-road"><span class="cm-anim">${VEH.jeep}</span></div>`,
-      sub:S.traffic.live?"LIVE TRAFFIC · GOOGLE MAPS"
-                              :"TYPICAL DRIVE TIME · NO LIVE TRAFFIC"});
+      sub:"TYPICAL DRIVE TIME · OSRM ROUTER · NO LIVE TRAFFIC"});
   }
 
   /* METRO-NORTH — next scheduled trains to the city */
@@ -3574,17 +3570,10 @@ async function fetchTides(){
 }
 async function fetchTraffic(){
   if(!PROXY_OK)return;
-  const gm=async dest=>{
-    const u=`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(CFG.office.addr)}&destinations=${encodeURIComponent(dest)}&departure_time=now&key=${CFG.gmapsKey}`;
-    const j=await jget(viaProxy(u));
-    const el=j.rows?.[0]?.elements?.[0];
-    // Key is IP-restricted and REQUEST_DENIEDs the office network — throw so
-    // the OSRM fallback below kicks in instead of rendering an empty page.
-    if(j.status!=="OK"||!el||el.status!=="OK") throw new Error(j.error_message||"dm fail");
-    return ((el.duration_in_traffic||el.duration).text)
-      .replace(" mins","m").replace(" min","m").replace(" hours","h").replace(" hour","h");
-  };
-  // Keyless fallback: OSRM public router — typical (no-traffic) drive time.
+  // OSRM public router only — keyless and free. Google Distance Matrix
+  // (departure_time=now = "Advanced" SKU) was quietly billing ~$48/mo across
+  // the two screens, and live-vs-typical wasn't worth that. If live traffic
+  // is ever missed, TomTom's free tier (2.5K req/day) is the way back in.
   const osrm=async(lat,lon)=>{
     const u=`https://router.project-osrm.org/route/v1/driving/${CFG.office.lon},${CFG.office.lat};${lon},${lat}?overview=false`;
     const j=await jget(viaProxy(u));
@@ -3593,17 +3582,11 @@ async function fetchTraffic(){
     const m=Math.round(s/60);
     return m>=60?Math.floor(m/60)+"h "+(m%60)+"m":m+"m";
   };
-  try{
-    S.traffic={home:await gm(CFG.homeAddr), lake:await gm(CFG.lake.addr),
-               woodside:await gm("Woodside, Queens, NY"),
-               shelton:await gm("Shelton, CT"), live:true};
-  }catch(e){
-    try{S.traffic={home:await osrm(CFG.home.lat,CFG.home.lon),
-                   lake:await osrm(CFG.lake.lat,CFG.lake.lon),
-                   woodside:await osrm(40.7454,-73.9022),   // coworker commutes
-                   shelton:await osrm(41.3165,-73.0932),
-                   live:false};}catch(e2){}
-  }
+  try{S.traffic={home:await osrm(CFG.home.lat,CFG.home.lon),
+                 lake:await osrm(CFG.lake.lat,CFG.lake.lon),
+                 woodside:await osrm(40.7454,-73.9022),   // coworker commutes
+                 shelton:await osrm(41.3165,-73.0932),
+                 live:false};}catch(e){}
 }
 const trimToLen=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
 function rssTitles(xml,limit){
