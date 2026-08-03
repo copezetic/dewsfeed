@@ -3534,7 +3534,8 @@ async function fetchBuoy(){
     const rows=t.split("\n").filter(l=>l&&!l.startsWith("#"));
     if(!rows.length)return;
     const c=rows[0].trim().split(/\s+/);
-    const wvht=parseFloat(c[8]), wtmp=parseFloat(c[14]), pres=parseFloat(c[12]);
+    const wvht=parseFloat(c[8]), wtmp=parseFloat(c[14]);
+    let pres=parseFloat(c[12]);
     // Barometric tendency: compare against the reading ~3 hours back (the
     // feed carries weeks of history). NWS convention: ±1 hPa/3h = steady.
     let trend=null;
@@ -3548,6 +3549,19 @@ async function fetchBuoy(){
           break;
         }
       }
+    }else{
+      // 44025's met package has been reporting MM (sensor down) — waves and
+      // water temp still work, but pressure comes up empty. Fall back to
+      // open-meteo sea-level pressure at the office, with a 4h trend window.
+      try{
+        const j=await jget(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.office.lat}&longitude=${CFG.office.lon}&current=pressure_msl&hourly=pressure_msl&past_hours=4&forecast_hours=1`);
+        const cur=j.current?.pressure_msl;
+        if(cur!=null){
+          pres=cur;
+          const hp=j.hourly?.pressure_msl||[];
+          if(hp.length&&hp[0]!=null) trend=cur-hp[0];
+        }
+      }catch(e){}
     }
     S.buoy={
       waveFt:isNaN(wvht)?null:(wvht*3.281).toFixed(1),
