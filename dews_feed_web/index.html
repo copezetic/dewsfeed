@@ -1037,12 +1037,21 @@
   .cm .n{font-size:2vh;color:var(--ink-faint);margin-top:.4vh;letter-spacing:.15em}
 
   /* ── WHOOP recovery page ── */
+  .wh-page{display:flex;flex-direction:column;gap:2.4vh;width:92vw}
   .wh-wrap{display:flex;align-items:center;gap:5vw}
   .wh-ring{position:relative;flex:0 0 auto}
-  .wh-ring svg{display:block;height:42vh;width:42vh;transform:rotate(-90deg)}
+  .wh-ring svg{display:block;height:34vh;width:34vh;transform:rotate(-90deg)}
+  .wh-charts{display:flex;gap:2vw}
+  .whc{flex:1;background:var(--card);border:1px solid var(--edge);border-radius:1.2vh;
+       padding:1.4vh 1.2vw}
+  .whc .l{font-family:var(--mono);font-size:1.8vh;letter-spacing:.22em;
+          color:var(--ink-dim);margin-bottom:.8vh}
+  .whc svg{display:block;width:100%;height:17vh}
+  .wh-note{font-family:var(--mono);font-size:1.9vh;letter-spacing:.18em;
+           color:var(--ink-faint)}
   .wh-ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;font-family:var(--mono)}
-  .wh-ring .pct .n{font-size:10vh;font-weight:800;line-height:1}
+  .wh-ring .pct .n{font-size:8vh;font-weight:800;line-height:1}
   .wh-ring .pct .l{font-size:2.2vh;letter-spacing:.3em;color:var(--ink-dim)}
   .wh-tiles{display:grid;grid-template-columns:repeat(2,20vw);gap:2vh 2.5vw}
   .wh-tile{background:var(--card);border:1px solid var(--edge);border-radius:1.2vh;
@@ -1865,16 +1874,21 @@ function moonPageHTML(){
   </div>`;
 }
 
-/* ══════════════ WHOOP (via Apps Script relay) ══════════════ */
+/* ══════════════ WHOOP (via the ToDew worker's health store) ══════════ */
+// The worker syncs WHOOP itself and keeps a 120-day daily history in KV.
+// GET /api/health needs no token and returns latest + history — this
+// replaced the old (expired) Apps Script relay. No CORS on the worker,
+// so it rides through the proxy like the task sync does.
 async function fetchWhoop(){
-  const u=CFG.whoopRelay; if(!u)return;
-  let j=null;
-  try{ j=await jget(u); }
-  catch(e){ if(PROXY_OK){ try{ j=await jget(viaProxy(u)); }catch(e2){} } }
-  if(!j)return;
-  // Relay returns all zeros when its WHOOP tokens are missing/expired
-  const sum=(j.recovery_score||0)+(j.strain||0)+(j.sleep_score||0);
-  S.whoop=sum>0?j:null;
+  if(!PROXY_OK)return;
+  try{
+    const j=await jget(viaProxy("https://todew.dewitt-bf3.workers.dev/api/health"));
+    if(!j||j.empty)return;
+    const sum=(j.recovery||0)+(j.strain||0)+(j.hrv||0);
+    S.whoop=sum>0?{recovery_score:j.recovery||0,strain:j.strain||0,
+      hrv:j.hrv||0,rhr:j.restingHR||0,steps:j.steps||0,
+      hist:j.history||{}}:null;
+  }catch(e){}
 }
 
 /* ══════════════ LIS NAUTICAL CHART ══════════════
@@ -3161,28 +3175,56 @@ function buildSpots(){
       sub:open.length+" OPEN · "+doneN+" DONE"});
   }
 
-  /* WHOOP — recovery ring + stat tiles (hidden until the relay is re-authed) */
+  /* WHOOP — recovery ring, stat tiles + progress graphs from the worker's
+     daily history (accrues in KV; charts fill in as days land) */
   if(S.whoop){
     const w=S.whoop, rec=Math.round(w.recovery_score||0);
     const recCol=rec>=67?"#39d353":rec>=34?"#ffd23f":"#ff4757";
     const R=150, C=2*Math.PI*R, dash=(rec/100)*C;
-    spots.push({k:"WHOOP RECOVERY",acc:recCol,html:true,
-      body:`<div class="wh-wrap">
-        <div class="wh-ring">
-          <svg viewBox="0 0 340 340">
-            <circle cx="170" cy="170" r="${R}" fill="none" stroke="#1a2030" stroke-width="24"/>
-            <circle cx="170" cy="170" r="${R}" fill="none" stroke="${recCol}" stroke-width="24"
-              stroke-linecap="round" stroke-dasharray="${dash.toFixed(0)} ${C.toFixed(0)}"/>
-          </svg>
-          <div class="pct"><div class="n" style="color:${recCol}">${rec}%</div>
-          <div class="l">RECOVERY</div></div>
+    // last 14 days of history → bar charts (recovery color-banded, strain cyan)
+    const days=Object.keys(w.hist||{}).sort().slice(-14);
+    const barsSVG=(key,max,colFn)=>{
+      const W=520,H=150,PB=26,bw=Math.min(30,Math.floor((W-20)/Math.max(days.length,7))-8);
+      const step=(W-20)/Math.max(days.length,7);
+      const bars=days.map((d,i)=>{
+        const v=w.hist[d]?.[key];
+        if(v==null)return "";
+        const h=Math.max(3,(v/max)*(H-PB-8));
+        const x=10+i*step+(step-bw)/2, y=H-PB-h;
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}"
+            rx="3" fill="${colFn(v)}" opacity=".9"/>
+          <text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" fill="#8fa3c0" font-size="12"
+            text-anchor="middle" font-family="monospace">${Math.round(v)}</text>
+          <text x="${(x+bw/2).toFixed(1)}" y="${H-8}" fill="#5a6a85" font-size="11"
+            text-anchor="middle" font-family="monospace">${d.slice(8)}</text>`;
+      }).join("");
+      return `<svg viewBox="0 0 ${W} ${H}">${bars||""}</svg>`;
+    };
+    const recBar=v=>v>=67?"#39d353":v>=34?"#ffd23f":"#ff4757";
+    const haveHist=days.length>=2;
+    spots.push({k:"WHOOP RECOVERY",acc:recCol,html:true,dur:18000,
+      body:`<div class="wh-page">
+        <div class="wh-wrap">
+          <div class="wh-ring">
+            <svg viewBox="0 0 340 340">
+              <circle cx="170" cy="170" r="${R}" fill="none" stroke="#1a2030" stroke-width="24"/>
+              <circle cx="170" cy="170" r="${R}" fill="none" stroke="${recCol}" stroke-width="24"
+                stroke-linecap="round" stroke-dasharray="${dash.toFixed(0)} ${C.toFixed(0)}"/>
+            </svg>
+            <div class="pct"><div class="n" style="color:${recCol}">${rec}%</div>
+            <div class="l">RECOVERY</div></div>
+          </div>
+          <div class="wh-tiles">
+            <div class="wh-tile"><div class="l">STRAIN</div><div class="v" style="color:var(--cyan)">${(w.strain||0).toFixed(1)}</div></div>
+            <div class="wh-tile"><div class="l">HRV</div><div class="v" style="color:var(--amber)">${Math.round(w.hrv||0)}<span style="font-size:2.4vh"> MS</span></div></div>
+            <div class="wh-tile"><div class="l">RESTING HR</div><div class="v" style="color:var(--red,#ff4757)">${Math.round(w.rhr||0)}<span style="font-size:2.4vh"> BPM</span></div></div>
+            <div class="wh-tile"><div class="l">STEPS</div><div class="v" style="color:var(--green)">${(w.steps||0).toLocaleString()}</div></div>
+          </div>
         </div>
-        <div class="wh-tiles">
-          <div class="wh-tile"><div class="l">STRAIN</div><div class="v" style="color:var(--cyan)">${(w.strain||0).toFixed(1)}</div></div>
-          <div class="wh-tile"><div class="l">SLEEP</div><div class="v" style="color:var(--purple)">${Math.round(w.sleep_score||0)}%</div></div>
-          <div class="wh-tile"><div class="l">HRV</div><div class="v" style="color:var(--amber)">${Math.round(w.hrv||0)}<span style="font-size:2.4vh"> MS</span></div></div>
-          <div class="wh-tile"><div class="l">RESTING HR</div><div class="v" style="color:var(--red)">${Math.round(w.rhr||0)}<span style="font-size:2.4vh"> BPM</span></div></div>
-        </div>
+        ${haveHist?`<div class="wh-charts">
+          <div class="whc"><div class="l">RECOVERY · LAST ${days.length} DAYS</div>${barsSVG("recovery",100,recBar)}</div>
+          <div class="whc"><div class="l">STRAIN · LAST ${days.length} DAYS</div>${barsSVG("strain",21,()=>"#4fd7e8")}</div>
+        </div>`:`<div class="wh-note">PROGRESS GRAPHS FILL IN AS DAILY HISTORY ACCRUES</div>`}
       </div>`,
       sub:rec>=67?"GREEN — GO GET IT":rec>=34?"YELLOW — PACE YOURSELF":"RED — RECOVERY DAY"});
   }
@@ -3785,6 +3827,24 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
       showSpot();},3000);
+  if(location.hash==="#testwhoop")
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WHOOP RECOVERY"));
+      showSpot();},4000);
+  if(location.hash==="#testwhoopfake"){   // offline layout check — canned data
+    const h={};
+    const base=new Date(Date.now()-13*864e5);
+    for(let i=0;i<14;i++){
+      const d=new Date(base.getTime()+i*864e5).toLocaleDateString("en-CA");
+      h[d]={recovery:35+Math.round(55*Math.abs(Math.sin(i*1.1))),
+            strain:4+Math.round(15*Math.abs(Math.cos(i*.8)))/1,
+            hrv:60+i,restingHR:47,steps:8000};
+    }
+    S.whoop={recovery_score:86,strain:13.9,hrv:66,rhr:46,steps:10740,hist:h};
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WHOOP RECOVERY"));
+      showSpot();},2500);
+  }
   if(location.hash==="#testhorofake"){   // offline layout check — canned data
     S.horo=[
       {sign:"SAGITTARIUS",glyph:"♐",col:"#ffb400",txt:"Adventure calls today, Sagittarius. A conversation at work opens a door you had written off — walk through it before Friday. Money looks steady; the risk worth taking is social, not financial."},
