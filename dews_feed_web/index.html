@@ -1299,6 +1299,7 @@ const CFG = {
   // Flight box recentered on 100 Mason (office is the radar bullseye)
   flightBox:{lamin:40.58, lomin:-74.33, lamax:41.47, lomax:-72.92},
   whoopRelay:"",
+  aisKey:"",   // aisstream.io (free) — live vessels on the LIS chart
   pnbkLogo:"https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://patriotbank.com&size=128",
   pnbkLogoAlt:"https://icons.duckduckgo.com/ip3/patriotbank.com.ico",
   favorites:["BOS","NYM","NYY","NYG","NYJ","NE","BRK","NYK","NYR","NJD","PHI","USA"],
@@ -1323,7 +1324,8 @@ const S={ spx:null,btc:null,pnbk:null,fng:null, rates:{}, sparks:{}, sparkKind:{
           quakes:[], kp:null, alEast:null, afcEast:null, sitrep:[],
           predict:[], riaNews:[],
           launches:[], issPasses:[], curve:null, mort:{}, fx:null, air:null,
-          iss:null, maNews:[], techNews:[], sciNews:[], hn:[], horo:[] };
+          iss:null, maNews:[], techNews:[], sciNews:[], hn:[], horo:[],
+          ships:{} };
 
 /* ── clock + wordmark ── */
 function tick(){
@@ -1921,8 +1923,57 @@ const LIS_BUOYS=[
   {x:481,y:95, c:"#f2f4f8",per:5.0,n:"SAYBK"},   // Saybrook approach
   {x:398,y:108,c:"#ff4757",per:3.0,n:"FAULK"},   // Faulkner Is
 ];
+/* ══════════════ AIS — live vessels for the LIS chart ═════════════════ */
+// aisstream.io free websocket: subscribe once with a bounding box matching
+// the chart's projection, keep a rolling map of last-seen positions. The
+// chart snapshots whatever is current each time it renders.
+let aisWS=null,aisRetry=null;
+function startAIS(){
+  if(!CFG.aisKey||aisWS)return;
+  try{
+    aisWS=new WebSocket("wss://stream.aisstream.io/v0/stream");
+    aisWS.onopen=()=>aisWS.send(JSON.stringify({
+      APIKey:CFG.aisKey,
+      BoundingBoxes:[[[40.72,-74.08],[41.46,-71.78]]],   // = chart bbox
+      FilterMessageTypes:["PositionReport","ShipStaticData"]}));
+    aisWS.onmessage=ev=>{
+      try{
+        const m=JSON.parse(ev.data), md=m.MetaData||{};
+        const id=md.MMSI; if(!id)return;
+        const s=S.ships[id]||(S.ships[id]={});
+        s.ts=Date.now();
+        if(md.ShipName&&md.ShipName.trim())s.name=md.ShipName.trim();
+        if(m.MessageType==="PositionReport"&&m.Message&&m.Message.PositionReport){
+          const p=m.Message.PositionReport;
+          s.lat=p.Latitude; s.lon=p.Longitude; s.cog=p.Cog||0; s.sog=p.Sog||0;
+        }else if(md.latitude!=null){ s.lat=md.latitude; s.lon=md.longitude; }
+      }catch(e){}
+    };
+    aisWS.onclose=()=>{aisWS=null;clearTimeout(aisRetry);aisRetry=setTimeout(startAIS,30000);};
+    aisWS.onerror=()=>{try{aisWS.close();}catch(e){}};
+  }catch(e){aisWS=null;}
+}
+function lisShips(){
+  // project into the chart's 640x320 box (lon -74.08..-71.78, lat 40.72..41.46)
+  const SX=lon=>((lon+74.08)/2.3)*640, SY=lat=>((41.46-lat)/0.74)*320;
+  const now=Date.now();
+  const live=Object.values(S.ships).filter(s=>s.lat!=null&&now-s.ts<20*60*1000);
+  const marks=live.slice(0,40).map(s=>{
+    const x=SX(s.lon),y=SY(s.lat);
+    if(x<4||x>636||y<4||y>316)return "";
+    const moving=(s.sog||0)>=0.5;
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(s.cog||0).toFixed(0)})">
+        <path d="M0 -7 L4.5 6 L0 3 L-4.5 6 Z" fill="${moving?"#4fd7e8":"#8fa3c0"}"
+          stroke="#0a1826" stroke-width=".8" opacity=".95"/>
+      </g>
+      ${moving&&s.name?`<text x="${(x+8).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="9"
+        fill="#4fd7e8" opacity=".8">${esc(s.name.slice(0,12))}</text>`:""}`;
+  }).join("");
+  return {marks,count:live.length};
+}
 function lisChartHTML(){
   const land="#0e2416", landEdge="#1e4a2e", sand="#3a5a40";
+  const ships=lisShips();
   const buoys=LIS_BUOYS.map(b=>`
     <g class="buoy" style="--per:${b.per}s">
       <circle cx="${b.x}" cy="${b.y}" r="11" fill="${b.c}" opacity=".18"/>
@@ -1945,6 +1996,8 @@ function lisChartHTML(){
           :"—"}</div></div>
       <div class="row"><div class="l">NEXT TIDE · STAMFORD</div>
         <div class="v gold">${S.tides||"—"}</div></div>
+      ${CFG.aisKey?`<div class="row"><div class="l">VESSELS · AIS</div>
+        <div class="v" style="color:#4fd7e8">${ships.count||"—"}</div></div>`:""}
     </div>`;
   return `<div class="lis-wrap">
     <div class="lis-map"><svg viewBox="0 0 640 320">
@@ -2015,6 +2068,7 @@ function lisChartHTML(){
       <text x="140" y="300" font-size="15" fill="#3d5f80">LONG ISLAND</text>
       <text x="230" y="34"  font-size="15" fill="#3d5f80">CONNECTICUT</text>
       <text x="24" y="313" font-size="9" fill="#2c4a66">SOUNDINGS IN FEET · CHART 12363 · US CENSUS COASTLINE</text>
+      ${ships.marks}
       ${buoys}
     </svg></div>
     ${info}
@@ -2563,6 +2617,13 @@ function volcanoHTML(){
 function auroraHTML(){
   return `<div class="amb-aurora"><i></i><i></i><i></i><b></b></div>`;
 }
+function issLiveHTML(){
+  // "Live High-Definition Views from the ISS" — NASA's long-running 24/7
+  // Earth-facing camera stream. Pinned by ID; the channel-live embed can
+  // resolve to launch coverage instead of the Earth view.
+  return `<iframe class="amb-video amb-yt" allow="autoplay; encrypted-media"
+    src="https://www.youtube-nocookie.com/embed/awQzjn72bI0?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0"></iframe>`;
+}
 const AMB_PLANETS=[  // name, orbit radius vh, size vh, color, period s
   ["MERCURY",6.5,.9,"#b9a698",7],["VENUS",9.5,1.4,"#e6c78d",11],
   ["EARTH",12.8,1.5,"#5aa0e0",16],["MARS",16,1.2,"#d97b53",24],
@@ -2579,6 +2640,7 @@ function solarHTML(){
 }
 const AMBIENT=[
   {k:"VOLCANO NIGHTS",  b:volcanoHTML, ok:()=>(CFG.nightVideo&&!S.volcanoDead)||CFG.nightVideoYT, dur:300000},
+  {k:"ISS EARTH VIEW",  b:issLiveHTML, ok:()=>true, dur:240000},
   {k:"AURORA BOREALIS", b:auroraHTML,  ok:()=>true, dur:150000},
   {k:"SOLAR SYSTEM",    b:solarHTML,   ok:()=>true, dur:150000},
 ];
@@ -3133,7 +3195,8 @@ function buildSpots(){
   /* LONG ISLAND SOUND — nautical chart with live blinking buoys */
   bumper("THE HOMEFRONT","⚓","bg-waves","var(--teal)");
   spots.push({k:"LONG ISLAND SOUND",acc:"var(--teal)",html:true,
-    body:lisChartHTML(), sub:"BUOYS BLINK AT REAL NOAA FLASH PERIODS · DATA: NDBC 44025"});
+    body:lisChartHTML(),
+    sub:"BUOYS AT REAL NOAA FLASH PERIODS · NDBC 44025"+(CFG.aisKey?" · VESSELS: AIS LIVE":"")});
 
   /* COMMUTE — OSRM typical drive times (Google Maps dropped: it was billing) */
   if(S.traffic){
@@ -3761,6 +3824,7 @@ async function fetchTasks(){
   every(fetchAir,30*60*1000);      // AQI + UV tiles on the weather page
   every(fetchHoro,6*60*60*1000);   // daily horoscope — text changes once a day
   setInterval(pollMusic,5000);     // DEWS FM switch — phone toggles, wall obeys
+  startAIS();                      // live vessels (no-op until aisKey is set)
   setInterval(()=>{   // ISS heads-up: high pass rising within 10 min, once each
     const p=S.issPasses[0]; if(!p)return;
     const mins=(new Date(p.start)-Date.now())/60000;
@@ -3827,6 +3891,18 @@ async function fetchTasks(){
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="STANDINGS"));
       showSpot();},3000);
+  if(location.hash==="#testlisships"){   // offline layout check — canned AIS
+    CFG.aisKey="test";
+    const now=Date.now();
+    S.ships={1:{lat:41.01,lon:-73.55,cog:78,sog:12,name:"EVER FORWARD",ts:now},
+      2:{lat:40.95,lon:-73.25,cog:250,sog:8,name:"CT ROSE",ts:now},
+      3:{lat:41.12,lon:-72.55,cog:95,sog:14,name:"MCALLISTER",ts:now},
+      4:{lat:40.99,lon:-73.42,cog:0,sog:0,name:"ANCHORED",ts:now},
+      5:{lat:41.18,lon:-72.2,cog:210,sog:10,name:"PT JUDITH",ts:now}};
+    setTimeout(()=>{buildSpots();
+      spotIdx=Math.max(0,spots.findIndex(s=>s.k==="LONG ISLAND SOUND"));
+      showSpot();},2500);
+  }
   if(location.hash==="#testwhoop")
     setTimeout(()=>{buildSpots();
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="WHOOP RECOVERY"));
@@ -3935,8 +4011,9 @@ async function fetchTasks(){
       spotIdx=Math.max(0,spots.findIndex(s=>s.k==="RIA & WEALTH MGMT"));
       showSpot();},3000);
   if(location.hash==="#testvolcano") setTimeout(()=>{ambIdx=0;showAmbient();},1500);
-  if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=1;showAmbient();},1500);
-  if(location.hash==="#testsolar")   setTimeout(()=>{ambIdx=2;showAmbient();},1500);
+  if(location.hash==="#testiss")     setTimeout(()=>{ambIdx=1;showAmbient();},1500);
+  if(location.hash==="#testaurora")  setTimeout(()=>{ambIdx=2;showAmbient();},1500);
+  if(location.hash==="#testsolar")   setTimeout(()=>{ambIdx=3;showAmbient();},1500);
 })();
 </script>
 </body>

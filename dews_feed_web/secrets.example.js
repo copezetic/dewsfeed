@@ -5,6 +5,7 @@ window.SECRETS={
   fredKey:"YOUR_FRED_KEY",
   gmapsKey:"YOUR_GOOGLE_MAPS_KEY",
   todewToken:"YOUR_TODEW_SYNC_TOKEN",       // = ToDew Worker HEALTH_TOKEN
-  whoopRelay:"YOUR_APPS_SCRIPT_RELAY_URL",  // WHOOP relay, or "" to hide page
+  whoopRelay:"",                            // unused — WHOOP now reads the ToDew worker
   avKey:"YOUR_ALPHA_VANTAGE_KEY",
+  aisKey:"YOUR_AISSTREAM_KEY",              // aisstream.io free key — live ships on the LIS chart
 };
