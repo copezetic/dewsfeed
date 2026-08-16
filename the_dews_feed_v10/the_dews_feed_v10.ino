@@ -171,6 +171,7 @@ uint16_t C_BLACK, C_WHITE, C_GRAY, C_DARKGRAY, C_RED, C_GREEN, C_BLUE,
 #define BRIGHTNESS_NIGHT  18
 #define NIGHT_HOUR_START  22
 #define NIGHT_HOUR_END     6
+#define SLEEP_HOUR_START  23   // panel goes fully dark 11pm → NIGHT_HOUR_END
 
 // Refresh intervals (ms)
 #define REFRESH_NEWS     600000UL
@@ -752,6 +753,7 @@ uint16_t pctColor(float p) {  // 0-100 green=good red=bad
 
 int getHour() { struct tm t; if(!getLocalTime(&t)) return 12; return t.tm_hour; }
 bool isNightTime() { int h=getHour(); return (h>=NIGHT_HOUR_START||h<NIGHT_HOUR_END); }
+bool isSleepTime() { int h=getHour(); return (h>=SLEEP_HOUR_START||h<NIGHT_HOUR_END); }
 
 String getSeason() {
   struct tm t; if(!getLocalTime(&t)) return "winter";
@@ -9273,8 +9275,9 @@ void splashReveal(){
   // settle on the brand reveal before the news card replaces it.
   delay(4000);
 
-  // Restore working brightness
-  if(matrix) matrix->setBrightness8(BRIGHTNESS_DAY);
+  // Restore working brightness (0 = booted inside the sleep window: the
+  // loop's sleep guard keeps it dark until morning)
+  if(matrix) matrix->setBrightness8(isSleepTime()?0:BRIGHTNESS_DAY);
   cls();
 }
 
@@ -9347,6 +9350,9 @@ void showSplash(){
   } else {
     splashRow(29, "TIME", "ntp failed", 3);
   }
+  // If this is the 4am maintenance reboot (or any boot in the sleep window),
+  // kill the light as soon as we know the time — no bright splash at night.
+  if(isSleepTime() && matrix) matrix->setBrightness8(0);
   delay(120);
 
   // STEP 4: OTA — register over-the-air
@@ -9847,6 +9853,26 @@ void loop(){
     if(matrix) matrix->setBrightness8(nightMode?BRIGHTNESS_NIGHT:BRIGHTNESS_DAY);
     cls();
   }
+
+  // ── Panel sleep: fully dark 11pm–6am. Even the dimmed night cards are
+  // bright for a dark room, and some animated ones strobe. Blank the panel
+  // and stop rendering entirely; WiFi/OTA/watchdog (all handled above this
+  // point in the loop) stay alive so the panel remains reachable overnight.
+  static bool panelAsleep=false;
+  bool shouldSleep=isSleepTime();
+  if(shouldSleep!=panelAsleep){
+    panelAsleep=shouldSleep;
+    if(panelAsleep){
+      Serial.println("[SLEEP] panel dark until morning");
+      if(matrix){ matrix->clearScreen(); matrix->setBrightness8(0); }
+    }else{
+      Serial.println("[SLEEP] good morning — waking panel");
+      if(matrix) matrix->setBrightness8(nightMode?BRIGHTNESS_NIGHT:BRIGHTNESS_DAY);
+      playIdx=0; slideStart=now; lastStaticDraw=0;   // fresh rotation from scratch
+      cls();
+    }
+  }
+  if(panelAsleep){ delay(250); return; }
 
   // Brightness
   if(now-lastBrightness>60000){
